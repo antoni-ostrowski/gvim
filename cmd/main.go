@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
-	"github.com/antoni-ostrowski/gvim/internal/render"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -17,23 +16,21 @@ func main() {
 	if err := screen.Init(); err != nil {
 		log.Fatalf("%+v", err)
 	}
+	defer func() {
+		screen.Fini()
+		os.Exit(0)
+	}()
 	screen.EnablePaste()
 	screen.Clear()
-	app := &app.App{Message: "stintsr"}
+	eventChannel := screen.EventQ()
+	appState := &app.App{ScreenEventChan: eventChannel, Mode: &app.NormalMode{}}
 
 	for {
-		render.DrawAppState(screen, app)
+		app.DrawAppState(screen, appState)
 
-		ev := <-screen.EventQ()
-		if ev, ok := ev.(*tcell.EventKey); ok {
-			// Normal mode - handle main screen input
-			switch ev.Key() {
-			case tcell.KeyCtrlC:
-				screen.Fini()
-				os.Exit(0)
-			case tcell.KeyRune:
-				os.Exit(0)
-			}
+		event := <-eventChannel
+		if ev, ok := event.(*tcell.EventKey); ok {
+			appState.Mode.KeyHandler(screen, appState, ev)
 		}
 	}
 
