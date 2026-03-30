@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
+	"github.com/antoni-ostrowski/gvim/internal/machine"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -23,14 +24,14 @@ func main() {
 	screen.EnablePaste()
 	screen.Clear()
 	eventChannel := screen.EventQ()
-	appState := &app.App{ScreenEventChan: eventChannel, Mode: &app.NormalMode{}}
+	appState := &app.App{ScreenEventChan: eventChannel, Machine: machine.VimMachine{Mode: &machine.NormalMode{}}}
 
 	for {
 		app.DrawAppState(screen, appState)
 
 		event := <-eventChannel
 		if ev, ok := event.(*tcell.EventKey); ok {
-			appState.Mode.KeyHandler(screen, appState, ev)
+			appState.Machine.Mode.KeyHandler(ev, appState)
 		}
 	}
 

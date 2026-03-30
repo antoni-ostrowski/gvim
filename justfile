@@ -5,4 +5,4 @@ dev:
   go run ./cmd/
 
 build:
-  go build 
+  go build ./cmd 
