@@ -24,15 +24,36 @@ func main() {
 	screen.EnablePaste()
 	screen.Clear()
 	eventChannel := screen.EventQ()
-	appState := &app.App{ScreenEventChan: eventChannel, Machine: machine.VimMachine{Mode: &machine.NormalMode{}}}
+	appState := &app.App{
+		Machine: machine.VimMachine{Mode: &machine.NormalMode{}},
+		QuitChn: make(chan struct{}, 1),
+		Screen:  screen,
+	}
 
 	for {
+		select {
+		case event := <-eventChannel:
+			if event, ok := event.(*tcell.EventKey); ok {
+				keyHandled := false
+				for _, elem := range appState.UiElements {
+					if elem.HandleKey(event, appState) {
+						keyHandled = true
+						break
+					}
+				}
+
+				if !keyHandled {
+					appState.Machine.Handler(event, appState)
+				}
+
+			}
+		case <-appState.QuitChn:
+			screen.Fini()
+			os.Exit(0)
+		}
+
 		app.DrawAppState(screen, appState)
 
-		event := <-eventChannel
-		if ev, ok := event.(*tcell.EventKey); ok {
-			appState.Machine.Mode.KeyHandler(ev, appState)
-		}
 	}
 
 }

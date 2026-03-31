@@ -6,3 +6,6 @@ dev:
 
 build:
   go build ./cmd 
+
+debug:
+  tail -f /tmp/gvim.log

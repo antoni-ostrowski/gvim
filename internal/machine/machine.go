@@ -19,12 +19,25 @@ func (m *VimMachine) Handler(event *tcell.EventKey, editorApi editorApi.EditorAp
 
 type EditorMode interface {
 	GetMode() string
-	KeyHandler(event *tcell.EventKey, editorActions editorApi.EditorApi) EditorMode
+	KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode
 }
 
 type NormalMode struct{}
 
-func (m *NormalMode) KeyHandler(event *tcell.EventKey, editorActions editorApi.EditorApi) EditorMode {
+var _ EditorMode = (*NormalMode)(nil)
+
+func (m *NormalMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	if res := handleShared(event, editorApi); res != nil {
+		return res
+	}
+
+	if event.Key() == tcell.KeyRune {
+		switch event.Str() {
+		case ":":
+			editorApi.ToggleCommandPrompt(true)
+		}
+	}
+
 	return nil
 }
 
@@ -32,7 +45,13 @@ func (m *NormalMode) GetMode() string { return "normal" }
 
 type insertMode struct{}
 
-func (m *insertMode) KeyHandler(event *tcell.EventKey, editorActions editorApi.EditorApi) EditorMode {
+var _ EditorMode = (*insertMode)(nil)
+
+func (m *insertMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	if res := handleShared(event, editorApi); res != nil {
+		return res
+	}
+
 	return nil
 }
 
@@ -40,16 +59,65 @@ func (m *insertMode) GetMode() string { return "insert" }
 
 type visualMode struct{}
 
-func (m *visualMode) KeyHandler(event *tcell.EventKey, editorActions editorApi.EditorApi) EditorMode {
+var _ EditorMode = (*visualMode)(nil)
+
+func (m *visualMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	if res := handleShared(event, editorApi); res != nil {
+		return res
+	}
+
 	return nil
 }
 
 func (m *visualMode) GetMode() string { return "visual" }
 
-type commandPromptMode struct{}
+func handleShared(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	if res := handleQuitSignals(event, editorApi); res != nil {
+		return res
+	}
 
-func (m *commandPromptMode) KeyHandler(event *tcell.EventKey, editorActions editorApi.EditorApi) EditorMode {
+	if res := handleMovement(event, editorApi); res != nil {
+		return res
+	}
+
+	if res := handleModeSwitch(event, editorApi); res != nil {
+		return res
+	}
 	return nil
 }
 
-func (m *commandPromptMode) GetMode() string { return "commandPromptMode" }
+func handleQuitSignals(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	switch event.Key() {
+	case tcell.KeyCtrlC:
+		editorApi.SendQuitSignal()
+		return nil
+	}
+	return nil
+}
+
+func handleMovement(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	switch event.Key() {
+	}
+	return nil
+}
+
+func handleModeSwitch(event *tcell.EventKey, editorApi editorApi.EditorApi) EditorMode {
+	if event.Key() == tcell.KeyEsc {
+		editorApi.ToggleCommandPrompt(false)
+		return &NormalMode{}
+	}
+
+	if event.Key() == tcell.KeyRune {
+		str := event.Str()
+		switch str {
+		case "i":
+			return &insertMode{}
+		case "v":
+			return &visualMode{}
+		case "V":
+			return &visualMode{}
+		}
+	}
+
+	return nil
+}

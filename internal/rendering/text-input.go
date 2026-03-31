@@ -1,9 +1,22 @@
 package rendering
 
 import (
+	"fmt"
+	"os"
+
+	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
 	"github.com/gdamore/tcell/v3"
 	"github.com/mattn/go-runewidth"
 )
+
+func debugLog(format string, args ...any) {
+	f, err := os.OpenFile("/tmp/gvim.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	f.WriteString(fmt.Sprintf(format, args...) + "\n")
+}
 
 type TextInput struct {
 	X, Y      int    // Screen position of input field
@@ -11,50 +24,61 @@ type TextInput struct {
 	Buffer    []rune // The text content
 }
 
-func (t *TextInput) HandleKey(ev *tcell.EventKey) {
+var _ Drawable = (*TextInput)(nil)
+
+func (t *TextInput) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi) bool {
+	debugLog("TextInput.HandleKey: Key=%v, Str=%q, CursorPos=%d, BufferLen=%d, Buffer=%q", ev.Key(), ev.Str(), t.CursorPos, len(t.Buffer), string(t.Buffer))
 	switch ev.Key() {
 	case tcell.KeyRune:
 		// Insert character at cursor position
 		t.Buffer = append(t.Buffer[:t.CursorPos],
 			append([]rune(ev.Str()), t.Buffer[t.CursorPos:]...)...)
 		t.CursorPos++
+		return true
 
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if t.CursorPos > 0 {
 			t.Buffer = append(t.Buffer[:t.CursorPos-1], t.Buffer[t.CursorPos:]...)
 			t.CursorPos--
 		}
+		return true
 
 	case tcell.KeyDelete:
 		if t.CursorPos < len(t.Buffer) {
 			t.Buffer = append(t.Buffer[:t.CursorPos], t.Buffer[t.CursorPos+1:]...)
 		}
+		return true
 
 	case tcell.KeyLeft:
 		if t.CursorPos > 0 {
 			t.CursorPos--
 		}
+		return true
 
 	case tcell.KeyRight:
 		if t.CursorPos < len(t.Buffer) {
 			t.CursorPos++
 		}
+		return true
 
 	case tcell.KeyHome:
 		t.CursorPos = 0
+		return true
 
 	case tcell.KeyEnd:
 		t.CursorPos = len(t.Buffer)
+		return true
+	default:
+		return false
 	}
 }
 
 func (t *TextInput) Draw(s tcell.Screen) {
-	// Draw the text
 	text := string(t.Buffer)
-	s.PutStr(t.X, t.Y, text)
+	s.PutStrStyled(t.X, t.Y, text, tcell.StyleDefault)
 
-	// Calculate cursor screen position (accounting for Unicode width!)
 	cursorScreenX := t.X + t.runeWidth(t.Buffer[:t.CursorPos])
+
 	s.ShowCursor(cursorScreenX, t.Y)
 }
 
