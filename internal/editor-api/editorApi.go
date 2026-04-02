@@ -14,6 +14,19 @@ type EditorMode interface {
 	KeyHandler(event *tcell.EventKey, editorApi EditorApi) EditorMode
 }
 
+type UiElement interface {
+	Drawable
+	KeyHandler
+}
+
+type KeyHandler interface {
+	HandleKey(event *tcell.EventKey, api EditorApi) bool
+}
+
+type Drawable interface {
+	Draw(screen tcell.Screen)
+}
+
 type Direction interface {
 	isDirection()
 }

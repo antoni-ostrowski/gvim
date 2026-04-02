@@ -1,22 +1,11 @@
 package rendering
 
 import (
-	"fmt"
-	"os"
-
+	utils "github.com/antoni-ostrowski/gvim/internal"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
 	"github.com/gdamore/tcell/v3"
 	"github.com/mattn/go-runewidth"
 )
-
-func debugLog(format string, args ...any) {
-	f, err := os.OpenFile("/tmp/gvim.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-	f.WriteString(fmt.Sprintf(format, args...) + "\n")
-}
 
 type TextInput struct {
 	X, Y      int    // Screen position of input field
@@ -24,10 +13,10 @@ type TextInput struct {
 	Buffer    []rune // The text content
 }
 
-var _ Drawable = (*TextInput)(nil)
+var _ editorApi.Drawable = (*TextInput)(nil)
 
 func (t *TextInput) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi) bool {
-	debugLog("TextInput.HandleKey: Key=%v, Str=%q, CursorPos=%d, BufferLen=%d, Buffer=%q", ev.Key(), ev.Str(), t.CursorPos, len(t.Buffer), string(t.Buffer))
+	utils.Debuglog("TextInput.HandleKey: Key=%v, Str=%q, CursorPos=%d, BufferLen=%d, Buffer=%q", ev.Key(), ev.Str(), t.CursorPos, len(t.Buffer), string(t.Buffer))
 	switch ev.Key() {
 	case tcell.KeyRune:
 		// Insert character at cursor position

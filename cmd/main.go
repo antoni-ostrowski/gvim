@@ -5,8 +5,6 @@ import (
 	"os"
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
-	"github.com/antoni-ostrowski/gvim/internal/machine"
-	"github.com/antoni-ostrowski/gvim/internal/rendering"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -18,24 +16,17 @@ func main() {
 	if err := screen.Init(); err != nil {
 		log.Fatalf("%+v", err)
 	}
-	defer func() {
+	quit := func() {
 		screen.Fini()
 		os.Exit(0)
-	}()
+	}
+	defer quit()
+
 	screen.EnablePaste()
 	screen.Clear()
+
 	eventChannel := screen.EventQ()
-	appState := &app.App{
-		Machine:    machine.VimMachine{Mode: &machine.NormalMode{}},
-		QuitChn:    make(chan struct{}, 1),
-		Screen:     screen,
-		UiElements: []rendering.Drawable{},
-		EditorBuffer: app.EditorBuffer{
-			Lines:   [][]rune{},
-			CursorX: 0,
-			CursorY: 0,
-		},
-	}
+	appState := app.NewApp(screen)
 
 	for {
 		select {
@@ -55,8 +46,7 @@ func main() {
 
 			}
 		case <-appState.QuitChn:
-			screen.Fini()
-			os.Exit(0)
+			quit()
 		}
 
 		app.DrawAppState(screen, appState)

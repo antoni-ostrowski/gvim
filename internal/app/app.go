@@ -9,13 +9,27 @@ import (
 
 type App struct {
 	Machine      machine.VimMachine
-	UiElements   []rendering.Drawable
+	UiElements   []editorApi.UiElement
 	QuitChn      chan struct{}
 	Screen       tcell.Screen
 	EditorBuffer EditorBuffer
 }
 
 var _ editorApi.EditorApi = (*App)(nil)
+
+func NewApp(screen tcell.Screen) *App {
+	return &App{
+		Machine:    machine.VimMachine{Mode: &machine.NormalMode{}},
+		QuitChn:    make(chan struct{}, 1),
+		Screen:     screen,
+		UiElements: []editorApi.UiElement{},
+		EditorBuffer: EditorBuffer{
+			Lines:   [][]rune{},
+			CursorX: 0,
+			CursorY: 0,
+		},
+	}
+}
 
 func (a *App) SendQuitSignal() {
 	a.QuitChn <- struct{}{}
@@ -58,40 +72,13 @@ func (a *App) ToggleCommandPrompt(active bool) {
 
 func DrawAppState(screen tcell.Screen, appState *App) {
 	screen.Clear()
-	_, h := screen.Size()
-	screen.PutStrStyled(0, h-2, appState.Machine.Mode.GetMode(), tcell.StyleDefault)
 
 	appState.EditorBuffer.Draw(screen)
+	DrawStatusLine(screen, appState)
 
 	for _, elem := range appState.UiElements {
 		elem.Draw(screen)
 	}
 
 	screen.Show()
-}
-
-type CommandPrompt struct {
-	Input rendering.TextInput
-}
-
-var _ rendering.Drawable = (*CommandPrompt)(nil)
-
-func (c *CommandPrompt) Draw(screen tcell.Screen) {
-	c.Input.Draw(screen)
-}
-
-func (c *CommandPrompt) HandleKey(event *tcell.EventKey, editorApi editorApi.EditorApi) bool {
-	switch event.Key() {
-	case tcell.KeyEnter:
-		if len(c.Input.Buffer) == 0 {
-			return true
-		}
-
-		if string(c.Input.Buffer[0]) == "q" {
-			editorApi.SendQuitSignal()
-			return true
-		}
-		return true
-	}
-	return c.Input.HandleKey(event, editorApi)
 }

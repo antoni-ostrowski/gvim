@@ -2,7 +2,6 @@ package app
 
 import (
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
-	"github.com/antoni-ostrowski/gvim/internal/rendering"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -12,7 +11,7 @@ type EditorBuffer struct {
 	CursorY int
 }
 
-var _ rendering.Drawable = (*EditorBuffer)(nil)
+var _ editorApi.UiElement = (*EditorBuffer)(nil)
 
 func (e *EditorBuffer) Draw(screen tcell.Screen) {
 	screen.PutStrStyled(e.CursorX, e.CursorY, "ntsear", tcell.StyleDefault)
