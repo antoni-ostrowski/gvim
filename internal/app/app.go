@@ -8,26 +8,22 @@ import (
 )
 
 type App struct {
-	Machine      machine.VimMachine
+	Machine      editorApi.VimMachine
 	UiElements   []editorApi.UiElement
 	QuitChn      chan struct{}
 	Screen       tcell.Screen
-	EditorBuffer EditorBuffer
+	EditorBuffer editorApi.EditorBuffer
 }
 
 var _ editorApi.EditorApi = (*App)(nil)
 
 func NewApp(screen tcell.Screen) *App {
 	return &App{
-		Machine:    machine.VimMachine{Mode: &machine.NormalMode{}},
-		QuitChn:    make(chan struct{}, 1),
-		Screen:     screen,
-		UiElements: []editorApi.UiElement{},
-		EditorBuffer: EditorBuffer{
-			Lines:   [][]rune{},
-			CursorX: 0,
-			CursorY: 0,
-		},
+		Machine:      &machine.VimMachine{Mode: &machine.NormalMode{}},
+		QuitChn:      make(chan struct{}, 1),
+		Screen:       screen,
+		UiElements:   []editorApi.UiElement{},
+		EditorBuffer: &EditorTextBuffer{},
 	}
 }
 
@@ -35,26 +31,11 @@ func (a *App) SendQuitSignal() {
 	a.QuitChn <- struct{}{}
 }
 func (a *App) CurrentMode() editorApi.EditorMode {
-	return a.Machine.Mode
+	return a.Machine.GetMode()
 }
 
-func (a *App) MoveEditorBuffCursor(amount int, direction editorApi.Direction) {
-	currX := a.EditorBuffer.CursorX
-	currY := a.EditorBuffer.CursorY
-	switch direction.(type) {
-	case editorApi.Left:
-		if currX != 0 {
-			a.EditorBuffer.CursorX = currX - amount
-		}
-	case editorApi.Right:
-		a.EditorBuffer.CursorX = currX + amount
-	case editorApi.Up:
-		if currY != 0 {
-			a.EditorBuffer.CursorY = currY - 1
-		}
-	case editorApi.Down:
-		a.EditorBuffer.CursorY = currY + 1
-	}
+func (a *App) Buffer() editorApi.EditorBuffer {
+	return a.EditorBuffer
 }
 
 func (a *App) ToggleCommandPrompt(active bool) {
@@ -68,17 +49,4 @@ func (a *App) ToggleCommandPrompt(active bool) {
 			a.UiElements = a.UiElements[:index]
 		}
 	}
-}
-
-func DrawAppState(screen tcell.Screen, appState *App) {
-	screen.Clear()
-
-	appState.EditorBuffer.Draw(screen)
-	DrawStatusLine(screen, appState)
-
-	for _, elem := range appState.UiElements {
-		elem.Draw(screen)
-	}
-
-	screen.Show()
 }

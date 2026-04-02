@@ -5,13 +5,22 @@ import "github.com/gdamore/tcell/v3"
 type EditorApi interface {
 	SendQuitSignal()
 	ToggleCommandPrompt(active bool)
-	MoveEditorBuffCursor(amount int, direction Direction)
 	CurrentMode() EditorMode
+	Buffer() EditorBuffer
 }
 
 type EditorMode interface {
-	GetMode() string
 	KeyHandler(event *tcell.EventKey, editorApi EditorApi) EditorMode
+}
+
+type EditorBuffer interface {
+	Drawable
+	MoveCursor(amount int, direction Direction)
+}
+
+type VimMachine interface {
+	Handler(event *tcell.EventKey, api EditorApi)
+	GetMode() EditorMode
 }
 
 type UiElement interface {
@@ -27,18 +36,11 @@ type Drawable interface {
 	Draw(screen tcell.Screen)
 }
 
-type Direction interface {
-	isDirection()
-}
+type Direction int
 
-type Left struct{}
-type Right struct{}
-
-func (Left) isDirection()  {}
-func (Right) isDirection() {}
-
-type Up struct{}
-type Down struct{}
-
-func (Up) isDirection()   {}
-func (Down) isDirection() {}
+const (
+	DirLeft Direction = iota
+	DirRight
+	DirUp
+	DirDown
+)

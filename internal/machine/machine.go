@@ -10,11 +10,16 @@ type VimMachine struct {
 	pendingKeys []rune
 }
 
-func (m *VimMachine) Handler(event *tcell.EventKey, editorApi editorApi.EditorApi) {
+var _ editorApi.VimMachine = (*VimMachine)(nil)
+
+func (m *VimMachine) Handler(event *tcell.EventKey, api editorApi.EditorApi) {
 	// if handler returned diff mode, next key input will get handled by that "next" mode
-	if nextMode := m.Mode.KeyHandler(event, editorApi); nextMode != nil {
+	if nextMode := m.Mode.KeyHandler(event, api); nextMode != nil {
 		m.Mode = nextMode
 	}
+}
+func (m *VimMachine) GetMode() editorApi.EditorMode {
+	return m.Mode
 }
 
 type NormalMode struct{}
@@ -36,8 +41,6 @@ func (m *NormalMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.Edito
 	return nil
 }
 
-func (m *NormalMode) GetMode() string { return "NORMAL" }
-
 type insertMode struct{}
 
 var _ editorApi.EditorMode = (*insertMode)(nil)
@@ -50,21 +53,21 @@ func (m *insertMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.Edito
 	return nil
 }
 
-func (m *insertMode) GetMode() string { return "INSERT" }
-
 type visualMode struct{}
 
 var _ editorApi.EditorMode = (*visualMode)(nil)
 
 func (m *visualMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) editorApi.EditorMode {
-	if res := handleShared(event, editorApi); res != nil {
+	if res := handleQuitSignals(event, editorApi); res != nil {
+		return res
+	}
+
+	if res := handleModeSwitch(event, editorApi); res != nil {
 		return res
 	}
 
 	return nil
 }
-
-func (m *visualMode) GetMode() string { return "VISUAL" }
 
 func handleShared(event *tcell.EventKey, editorApi editorApi.EditorApi) editorApi.EditorMode {
 	if res := handleQuitSignals(event, editorApi); res != nil {
@@ -91,26 +94,28 @@ func handleQuitSignals(event *tcell.EventKey, editorApi editorApi.EditorApi) edi
 }
 
 func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
+	buf := api.Buffer()
 	switch event.Key() {
 	case tcell.KeyLeft:
-		api.MoveEditorBuffCursor(1, editorApi.Left{})
+
+		buf.MoveCursor(1, editorApi.DirLeft)
 	case tcell.KeyRight:
-		api.MoveEditorBuffCursor(1, editorApi.Right{})
+		buf.MoveCursor(1, editorApi.DirRight)
 	case tcell.KeyUp:
-		api.MoveEditorBuffCursor(1, editorApi.Up{})
+		buf.MoveCursor(1, editorApi.DirUp)
 	case tcell.KeyDown:
-		api.MoveEditorBuffCursor(1, editorApi.Down{})
+		buf.MoveCursor(1, editorApi.DirDown)
 	case tcell.KeyRune:
 		str := event.Str()
 		switch str {
 		case "h":
-			api.MoveEditorBuffCursor(1, editorApi.Left{})
+			buf.MoveCursor(1, editorApi.DirLeft)
 		case "l":
-			api.MoveEditorBuffCursor(1, editorApi.Right{})
+			buf.MoveCursor(1, editorApi.DirRight)
 		case "k":
-			api.MoveEditorBuffCursor(1, editorApi.Up{})
+			buf.MoveCursor(1, editorApi.DirUp)
 		case "j":
-			api.MoveEditorBuffCursor(1, editorApi.Down{})
+			buf.MoveCursor(1, editorApi.DirDown)
 		}
 
 	}
@@ -118,16 +123,17 @@ func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.Ed
 }
 
 func handleModeSwitch(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
-
 	if event.Key() == tcell.KeyEsc {
 		api.ToggleCommandPrompt(false)
 		return &NormalMode{}
 	}
 
-	if api.CurrentMode().GetMode() == "NORMAL" && event.Key() == tcell.KeyRune {
+	if _, ok := api.CurrentMode().(*NormalMode); ok && event.Key() == tcell.KeyRune {
 		str := event.Str()
 		switch str {
 		case "i":
+			return &insertMode{}
+		case "a":
 			return &insertMode{}
 		case "v":
 			return &visualMode{}

@@ -35,5 +35,5 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, editorApi editorApi.Edi
 func DrawStatusLine(screen tcell.Screen, appState *App) {
 	_, h := screen.Size()
 
-	screen.PutStrStyled(0, h-2, appState.Machine.Mode.GetMode(), tcell.StyleDefault)
+	screen.PutStrStyled(0, h-2, appState.Machine.GetMode().GetMode(), tcell.StyleDefault)
 }
