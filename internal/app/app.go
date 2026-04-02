@@ -8,16 +8,39 @@ import (
 )
 
 type App struct {
-	Machine    machine.VimMachine
-	UiElements []rendering.Drawable
-	QuitChn    chan struct{}
-	Screen     tcell.Screen
+	Machine      machine.VimMachine
+	UiElements   []rendering.Drawable
+	QuitChn      chan struct{}
+	Screen       tcell.Screen
+	EditorBuffer EditorBuffer
 }
 
 var _ editorApi.EditorApi = (*App)(nil)
 
 func (a *App) SendQuitSignal() {
 	a.QuitChn <- struct{}{}
+}
+func (a *App) CurrentMode() editorApi.EditorMode {
+	return a.Machine.Mode
+}
+
+func (a *App) MoveEditorBuffCursor(amount int, direction editorApi.Direction) {
+	currX := a.EditorBuffer.CursorX
+	currY := a.EditorBuffer.CursorY
+	switch direction.(type) {
+	case editorApi.Left:
+		if currX != 0 {
+			a.EditorBuffer.CursorX = currX - amount
+		}
+	case editorApi.Right:
+		a.EditorBuffer.CursorX = currX + amount
+	case editorApi.Up:
+		if currY != 0 {
+			a.EditorBuffer.CursorY = currY - 1
+		}
+	case editorApi.Down:
+		a.EditorBuffer.CursorY = currY + 1
+	}
 }
 
 func (a *App) ToggleCommandPrompt(active bool) {
@@ -35,7 +58,10 @@ func (a *App) ToggleCommandPrompt(active bool) {
 
 func DrawAppState(screen tcell.Screen, appState *App) {
 	screen.Clear()
-	screen.PutStrStyled(0, 0, "test from renderer func - "+appState.Machine.Mode.GetMode(), tcell.StyleDefault)
+	_, h := screen.Size()
+	screen.PutStrStyled(0, h-2, appState.Machine.Mode.GetMode(), tcell.StyleDefault)
+
+	appState.EditorBuffer.Draw(screen)
 
 	for _, elem := range appState.UiElements {
 		elem.Draw(screen)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
 	"github.com/antoni-ostrowski/gvim/internal/machine"
+	"github.com/antoni-ostrowski/gvim/internal/rendering"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -25,9 +26,15 @@ func main() {
 	screen.Clear()
 	eventChannel := screen.EventQ()
 	appState := &app.App{
-		Machine: machine.VimMachine{Mode: &machine.NormalMode{}},
-		QuitChn: make(chan struct{}, 1),
-		Screen:  screen,
+		Machine:    machine.VimMachine{Mode: &machine.NormalMode{}},
+		QuitChn:    make(chan struct{}, 1),
+		Screen:     screen,
+		UiElements: []rendering.Drawable{},
+		EditorBuffer: app.EditorBuffer{
+			Lines:   [][]rune{},
+			CursorX: 0,
+			CursorY: 0,
+		},
 	}
 
 	for {
