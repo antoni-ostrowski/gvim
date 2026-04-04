@@ -1,6 +1,9 @@
 package app
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"github.com/antoni-ostrowski/gvim/internal/machine"
+	"github.com/gdamore/tcell/v3"
+)
 
 func DrawAppState(screen tcell.Screen, appState *App) {
 	screen.Clear()
@@ -10,6 +13,15 @@ func DrawAppState(screen tcell.Screen, appState *App) {
 
 	for _, elem := range appState.UiElements {
 		elem.Draw(screen)
+	}
+
+	switch appState.Machine.GetMode().(type) {
+	case *machine.NormalMode:
+		screen.SetCursorStyle(tcell.CursorStyleDefault)
+	case *machine.InsertMode:
+		screen.SetCursorStyle(tcell.CursorStyleSteadyBar)
+	case *machine.VisualMode:
+		screen.SetCursorStyle(tcell.CursorStyleDefault)
 	}
 
 	screen.Show()

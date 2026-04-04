@@ -55,6 +55,11 @@ func (m *InsertMode) KeyHandler(event *tcell.EventKey, api editorApi.EditorApi) 
 
 	buf := api.Buffer()
 
+	if event.Key() == tcell.KeyBackspace {
+		buf.DeleteCharBeforeCursor()
+		return nil
+	}
+
 	if event.Key() == tcell.KeyRune {
 		r := []rune(event.Str())[0]
 		buf.InsertCharAtCurrPos(r)
@@ -69,11 +74,7 @@ type VisualMode struct{}
 var _ editorApi.EditorMode = (*VisualMode)(nil)
 
 func (m *VisualMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) editorApi.EditorMode {
-	if res := handleQuitSignals(event, editorApi); res != nil {
-		return res
-	}
-
-	if res := handleModeSwitch(event, editorApi); res != nil {
+	if res := handleShared(event, editorApi); res != nil {
 		return res
 	}
 

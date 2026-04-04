@@ -35,15 +35,18 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, editorApi editorApi.Edi
 
 func DrawStatusLine(screen tcell.Screen, appState *App) {
 	_, h := screen.Size()
-	var mode string
+
+	screen.PutStrStyled(0, h-2, GetCurrentEditorModeName(appState), tcell.StyleDefault)
+}
+
+func GetCurrentEditorModeName(appState *App) string {
 	switch appState.Machine.GetMode().(type) {
 	case *machine.NormalMode:
-		mode = "NORMAL"
+		return "NORMAL"
 	case *machine.InsertMode:
-		mode = "INSERT"
+		return "INSERT"
 	case *machine.VisualMode:
-		mode = "VISUAL"
+		return "VISUAL"
 	}
-
-	screen.PutStrStyled(0, h-2, mode, tcell.StyleDefault)
+	return "UNKNOWN"
 }

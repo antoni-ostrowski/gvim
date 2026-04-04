@@ -17,6 +17,7 @@ type EditorBuffer interface {
 	Drawable
 	MoveCursor(amount int, direction Direction)
 	InsertCharAtCurrPos(char rune)
+	DeleteCharBeforeCursor()
 }
 
 type VimMachine interface {

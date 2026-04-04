@@ -1,7 +1,6 @@
 package app
 
 import (
-	utils "github.com/antoni-ostrowski/gvim/internal"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
 	"github.com/gdamore/tcell/v3"
 )
@@ -20,7 +19,6 @@ func (e *EditorTextBuffer) Draw(screen tcell.Screen) {
 		for charIndex, char := range line {
 			screen.PutStrStyled(charIndex, lineIndex, string(char), tcell.StyleDefault)
 		}
-
 	}
 }
 
@@ -44,10 +42,6 @@ func (e *EditorTextBuffer) MoveCursor(amount int, direction editorApi.Direction)
 }
 
 func (e *EditorTextBuffer) InsertCharAtCurrPos(char rune) {
-	utils.Debuglog("cursor x = %v, cursor y = %v ", e.CursorX, e.CursorY)
-	utils.Debuglog("lines %v", e.Lines)
-	utils.Debuglog("send char %v", char)
-
 	for len(e.Lines) <= e.CursorY {
 		e.Lines = append(e.Lines, []rune{})
 	}
@@ -58,5 +52,26 @@ func (e *EditorTextBuffer) InsertCharAtCurrPos(char rune) {
 
 	e.Lines[e.CursorY][e.CursorX] = char
 	e.CursorX++
+}
 
+func (e *EditorTextBuffer) DeleteCharBeforeCursor() {
+	if e.CursorY >= len(e.Lines) {
+		return
+	}
+	if e.CursorX == 0 {
+		return
+	}
+
+	line := e.Lines[e.CursorY]
+	if len(line) == 0 {
+		return
+	}
+
+	if e.CursorX > len(line) {
+		e.CursorX = len(line)
+	}
+
+	// Delete and write back
+	e.Lines[e.CursorY] = append(line[:e.CursorX-1], line[e.CursorX:]...)
+	e.CursorX--
 }
