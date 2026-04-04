@@ -41,23 +41,30 @@ func (m *NormalMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.Edito
 	return nil
 }
 
-type insertMode struct{}
+type InsertMode struct{}
 
-var _ editorApi.EditorMode = (*insertMode)(nil)
+var _ editorApi.EditorMode = (*InsertMode)(nil)
 
-func (m *insertMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) editorApi.EditorMode {
-	if res := handleShared(event, editorApi); res != nil {
+func (m *InsertMode) KeyHandler(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
+	if res := handleShared(event, api); res != nil {
 		return res
+	}
+	buf := api.Buffer()
+
+	if event.Key() == tcell.KeyRune {
+		r := []rune(event.Str())[0]
+		buf.InsertCharAtCurrPos(r)
+		return nil
 	}
 
 	return nil
 }
 
-type visualMode struct{}
+type VisualMode struct{}
 
-var _ editorApi.EditorMode = (*visualMode)(nil)
+var _ editorApi.EditorMode = (*VisualMode)(nil)
 
-func (m *visualMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) editorApi.EditorMode {
+func (m *VisualMode) KeyHandler(event *tcell.EventKey, editorApi editorApi.EditorApi) editorApi.EditorMode {
 	if res := handleQuitSignals(event, editorApi); res != nil {
 		return res
 	}
@@ -132,13 +139,13 @@ func handleModeSwitch(event *tcell.EventKey, api editorApi.EditorApi) editorApi.
 		str := event.Str()
 		switch str {
 		case "i":
-			return &insertMode{}
+			return &InsertMode{}
 		case "a":
-			return &insertMode{}
+			return &InsertMode{}
 		case "v":
-			return &visualMode{}
+			return &VisualMode{}
 		case "V":
-			return &visualMode{}
+			return &VisualMode{}
 		}
 	}
 

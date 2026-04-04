@@ -16,6 +16,7 @@ type EditorMode interface {
 type EditorBuffer interface {
 	Drawable
 	MoveCursor(amount int, direction Direction)
+	InsertCharAtCurrPos(char rune)
 }
 
 type VimMachine interface {

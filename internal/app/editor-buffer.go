@@ -36,3 +36,8 @@ func (e *EditorTextBuffer) MoveCursor(amount int, direction editorApi.Direction)
 		e.CursorY = currY + 1
 	}
 }
+func (e *EditorTextBuffer) InsertCharAtCurrPos(char rune) {
+	e.Lines[e.CursorY][e.CursorX] = char
+	e.CursorX++
+
+}

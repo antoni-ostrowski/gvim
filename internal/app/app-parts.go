@@ -2,6 +2,7 @@ package app
 
 import (
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
+	"github.com/antoni-ostrowski/gvim/internal/machine"
 	"github.com/antoni-ostrowski/gvim/internal/rendering"
 	"github.com/gdamore/tcell/v3"
 )
@@ -34,6 +35,15 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, editorApi editorApi.Edi
 
 func DrawStatusLine(screen tcell.Screen, appState *App) {
 	_, h := screen.Size()
+	var mode string
+	switch appState.Machine.GetMode().(type) {
+	case *machine.NormalMode:
+		mode = "NORMAL"
+	case *machine.InsertMode:
+		mode = "INSERT"
+	case *machine.VisualMode:
+		mode = "VISUAL"
+	}
 
-	screen.PutStrStyled(0, h-2, appState.Machine.GetMode().GetMode(), tcell.StyleDefault)
+	screen.PutStrStyled(0, h-2, mode, tcell.StyleDefault)
 }
