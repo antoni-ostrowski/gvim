@@ -46,9 +46,13 @@ type InsertMode struct{}
 var _ editorApi.EditorMode = (*InsertMode)(nil)
 
 func (m *InsertMode) KeyHandler(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
-	if res := handleShared(event, api); res != nil {
+	if res := handleQuitSignals(event, api); res != nil {
 		return res
 	}
+	if res := handleModeSwitch(event, api); res != nil {
+		return res
+	}
+
 	buf := api.Buffer()
 
 	if event.Key() == tcell.KeyRune {
