@@ -135,6 +135,7 @@ func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.Ed
 }
 
 func handleModeSwitch(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
+	buf := api.Buffer()
 	if event.Key() == tcell.KeyEsc {
 		api.ToggleCommandPrompt(false)
 		return &NormalMode{}
@@ -146,6 +147,7 @@ func handleModeSwitch(event *tcell.EventKey, api editorApi.EditorApi) editorApi.
 		case "i":
 			return &InsertMode{}
 		case "a":
+			buf.MoveCursor(1, editorApi.DirRight)
 			return &InsertMode{}
 		case "v":
 			return &VisualMode{}
