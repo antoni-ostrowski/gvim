@@ -88,3 +88,23 @@ func (e *EditorTextBuffer) DeleteCharBeforeCursor() {
 	e.Lines[e.CursorY] = append(line[:e.CursorX-1], line[e.CursorX:]...)
 	e.CursorX--
 }
+
+func (e *EditorTextBuffer) InsertNewLine() {
+	e.MoveCursor(1, editorApi.DirDown)
+	e.Lines = append(e.Lines[:e.CursorY], append([][]rune{{}}, e.Lines[e.CursorY:]...)...)
+	e.JumpToLineStart()
+}
+
+func (e *EditorTextBuffer) UpsertNewLine() {
+	e.Lines = append(e.Lines[:e.CursorY], append([][]rune{{}}, e.Lines[e.CursorY:]...)...)
+	e.JumpToLineStart()
+}
+
+func (e *EditorTextBuffer) JumpToLineStart() {
+	e.CursorX = 0
+}
+
+func (e *EditorTextBuffer) JumpToLineEnd() {
+	newPos := len(e.Lines[e.CursorY])
+	e.CursorX = newPos
+}

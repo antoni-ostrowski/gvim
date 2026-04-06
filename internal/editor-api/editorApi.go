@@ -18,6 +18,10 @@ type EditorBuffer interface {
 	MoveCursor(amount int, direction Direction)
 	InsertCharAtCurrPos(char rune)
 	DeleteCharBeforeCursor()
+	InsertNewLine()
+	UpsertNewLine()
+	JumpToLineStart()
+	JumpToLineEnd()
 }
 
 type VimMachine interface {

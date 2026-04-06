@@ -55,6 +55,11 @@ func (m *InsertMode) KeyHandler(event *tcell.EventKey, api editorApi.EditorApi) 
 
 	buf := api.Buffer()
 
+	if event.Key() == tcell.KeyEnter {
+		buf.InsertNewLine()
+		return nil
+	}
+
 	if event.Key() == tcell.KeyBackspace {
 		buf.DeleteCharBeforeCursor()
 		return nil
@@ -107,9 +112,14 @@ func handleQuitSignals(event *tcell.EventKey, editorApi editorApi.EditorApi) edi
 
 func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
 	buf := api.Buffer()
+
+	if event.Key() == tcell.KeyEnter {
+		buf.InsertNewLine()
+		return nil
+	}
+
 	switch event.Key() {
 	case tcell.KeyLeft:
-
 		buf.MoveCursor(1, editorApi.DirLeft)
 	case tcell.KeyRight:
 		buf.MoveCursor(1, editorApi.DirRight)
@@ -128,6 +138,14 @@ func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.Ed
 			buf.MoveCursor(1, editorApi.DirUp)
 		case "j":
 			buf.MoveCursor(1, editorApi.DirDown)
+		case "o":
+			buf.InsertNewLine()
+		case "O":
+			buf.UpsertNewLine()
+		case "$":
+			buf.JumpToLineEnd()
+		case "0":
+			buf.JumpToLineStart()
 		}
 
 	}
