@@ -35,9 +35,22 @@ func (e *EditorTextBuffer) MoveCursor(amount int, direction editorApi.Direction)
 	case editorApi.DirUp:
 		if currY != 0 {
 			e.CursorY = currY - 1
+			newPos := len(e.Lines[e.CursorY])
+			if newPos == 0 {
+				e.CursorX = newPos
+			}
 		}
 	case editorApi.DirDown:
 		e.CursorY = currY + 1
+
+		for len(e.Lines) <= e.CursorY {
+			e.Lines = append(e.Lines, []rune{})
+		}
+
+		newPos := len(e.Lines[e.CursorY])
+		if newPos == 0 {
+			e.CursorX = newPos
+		}
 	}
 }
 
