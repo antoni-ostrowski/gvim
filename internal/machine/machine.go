@@ -52,13 +52,11 @@ func (m *InsertMode) KeyHandler(event *tcell.EventKey, api editorApi.EditorApi) 
 	if res := handleModeSwitch(event, api); res != nil {
 		return res
 	}
+	if res := handleSharedKeys(event, api); res != nil {
+		return res
+	}
 
 	buf := api.Buffer()
-
-	if event.Key() == tcell.KeyEnter {
-		buf.InsertNewLine()
-		return nil
-	}
 
 	if event.Key() == tcell.KeyBackspace {
 		buf.DeleteCharBeforeCursor()
@@ -98,6 +96,10 @@ func handleShared(event *tcell.EventKey, editorApi editorApi.EditorApi) editorAp
 	if res := handleModeSwitch(event, editorApi); res != nil {
 		return res
 	}
+
+	if res := handleSharedKeys(event, editorApi); res != nil {
+		return res
+	}
 	return nil
 }
 
@@ -110,9 +112,8 @@ func handleQuitSignals(event *tcell.EventKey, editorApi editorApi.EditorApi) edi
 	return nil
 }
 
-func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
+func handleSharedKeys(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
 	buf := api.Buffer()
-
 	if event.Key() == tcell.KeyEnter {
 		buf.InsertNewLine()
 		return nil
@@ -127,6 +128,14 @@ func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.Ed
 		buf.MoveCursor(1, editorApi.DirUp)
 	case tcell.KeyDown:
 		buf.MoveCursor(1, editorApi.DirDown)
+	}
+	return nil
+}
+
+func handleMovement(event *tcell.EventKey, api editorApi.EditorApi) editorApi.EditorMode {
+	buf := api.Buffer()
+
+	switch event.Key() {
 	case tcell.KeyRune:
 		str := event.Str()
 		switch str {

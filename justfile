@@ -5,7 +5,7 @@ dev:
   go run ./cmd/
 
 build:
-  go build ./cmd 
+  go build -o gvim ./cmd 
 
 debug:
   tail -f /tmp/gvim.log
