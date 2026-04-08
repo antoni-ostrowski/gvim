@@ -136,6 +136,7 @@ func (e *EditorGapBuffer) DeleteCharBeforeCursor() {
 }
 
 func (e *EditorGapBuffer) InsertNewLine() {
+	e.MoveCursor(1, editorApi.DirDown)
 	e.InsertCharAtCurrPos('\n')
 }
 
