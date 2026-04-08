@@ -1,6 +1,8 @@
 package app
 
 import (
+	"slices"
+
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
 	"github.com/gdamore/tcell/v3"
 )
@@ -25,7 +27,11 @@ func NewEditorBuffer(text string) *EditorGapBuffer {
 
 	return &EditorGapBuffer{Data: data, GapStart: len(runes), GapEnd: totalSize}
 }
-
+func (e *EditorGapBuffer) Bytes() []byte {
+	first := ([]byte(string(e.Data[:e.GapStart])))
+	second := ([]byte(string(e.Data[e.GapEnd:])))
+	return slices.Concat(first, second)
+}
 func (e *EditorGapBuffer) Draw(screen tcell.Screen) {
 	drawX, drawY := 0, 0
 	drawCursorX, drawCursorY := 0, 0

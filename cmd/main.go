@@ -26,7 +26,13 @@ func main() {
 	screen.Clear()
 
 	eventChannel := screen.EventQ()
-	appState := app.NewApp(screen)
+
+	path := ""
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+
+	appState := app.NewApp(screen, path)
 
 	for {
 		select {

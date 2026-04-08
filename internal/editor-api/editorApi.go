@@ -7,6 +7,7 @@ type EditorApi interface {
 	ToggleCommandPrompt(active bool)
 	CurrentMode() EditorMode
 	Buffer() EditorBuffer
+	WriteFile() error
 }
 
 type EditorMode interface {
@@ -22,6 +23,7 @@ type EditorBuffer interface {
 	UpsertNewLine()
 	JumpToLineStart()
 	JumpToLineEnd()
+	Bytes() []byte
 }
 
 type VimMachine interface {

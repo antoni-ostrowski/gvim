@@ -1,6 +1,7 @@
 package app
 
 import (
+	utils "github.com/antoni-ostrowski/gvim/internal"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
 	"github.com/antoni-ostrowski/gvim/internal/machine"
 	"github.com/antoni-ostrowski/gvim/internal/rendering"
@@ -17,7 +18,7 @@ func (c *CommandPrompt) Draw(screen tcell.Screen) {
 	c.Input.Draw(screen)
 }
 
-func (c *CommandPrompt) HandleKey(event *tcell.EventKey, editorApi editorApi.EditorApi) bool {
+func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi) bool {
 	switch event.Key() {
 	case tcell.KeyEnter:
 		if len(c.Input.Buffer) == 0 {
@@ -25,12 +26,21 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, editorApi editorApi.Edi
 		}
 
 		if string(c.Input.Buffer[0]) == "q" {
-			editorApi.SendQuitSignal()
+			api.SendQuitSignal()
+			return true
+		}
+
+		if string(c.Input.Buffer[0]) == "w" {
+			err := api.WriteFile()
+			if err != nil {
+				utils.Debuglog("err writing file %v", err)
+			}
+			api.ToggleCommandPrompt(false)
 			return true
 		}
 		return true
 	}
-	return c.Input.HandleKey(event, editorApi)
+	return c.Input.HandleKey(event, api)
 }
 
 func DrawStatusLine(screen tcell.Screen, appState *App) {
