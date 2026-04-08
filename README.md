@@ -15,9 +15,7 @@ A terminal-based text editor written in Go, inspired by Vim.
 
 # Development
 
-## Build
-
-## Prerequisites
+#### Prerequisites
 
 - Go 1.25.4
 - [just - task runner](https://github.com/casey/just)
@@ -26,7 +24,7 @@ A terminal-based text editor written in Go, inspired by Vim.
 just build
 ```
 
-### Debug Logs
+#### Debug Logs
 
 Project uses a debug log utility for development:
 
