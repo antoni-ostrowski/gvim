@@ -23,7 +23,7 @@ func NewApp(screen tcell.Screen) *App {
 		QuitChn:      make(chan struct{}, 1),
 		Screen:       screen,
 		UiElements:   []editorApi.UiElement{},
-		EditorBuffer: &EditorTextBuffer{CursorX: 0, CursorY: 0, Lines: [][]rune{}},
+		EditorBuffer: NewEditorBuffer(""),
 	}
 }
 

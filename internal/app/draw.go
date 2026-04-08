@@ -19,7 +19,7 @@ func DrawAppState(screen tcell.Screen, appState *App) {
 	case *machine.NormalMode:
 		screen.SetCursorStyle(tcell.CursorStyleDefault)
 	case *machine.InsertMode:
-		screen.SetCursorStyle(tcell.CursorStyleSteadyBar)
+		screen.SetCursorStyle(tcell.CursorStyleBlinkingBlock)
 	case *machine.VisualMode:
 		screen.SetCursorStyle(tcell.CursorStyleDefault)
 	}

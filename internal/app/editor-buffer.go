@@ -5,106 +5,209 @@ import (
 	"github.com/gdamore/tcell/v3"
 )
 
-type EditorTextBuffer struct {
-	Lines   [][]rune
-	CursorX int
-	CursorY int
+// we use go convention, so gap start is inclusive, gap end is exclusive
+// GapStart: The index of the first empty slot.
+// GapEnd: The index of the first valid character after the gap.
+type EditorGapBuffer struct {
+	Data     []rune
+	GapStart int
+	GapEnd   int
 }
 
-var _ editorApi.EditorBuffer = (*EditorTextBuffer)(nil)
+var _ editorApi.EditorBuffer = (*EditorGapBuffer)(nil)
 
-func (e *EditorTextBuffer) Draw(screen tcell.Screen) {
-	screen.ShowCursor(e.CursorX, e.CursorY)
-	for lineIndex, line := range e.Lines {
-		for charIndex, char := range line {
-			screen.PutStrStyled(charIndex, lineIndex, string(char), tcell.StyleDefault)
+func NewEditorBuffer(text string) *EditorGapBuffer {
+	initGapSize := 1024
+	runes := []rune(text)
+	totalSize := initGapSize + len(runes)
+	data := make([]rune, totalSize)
+	copy(data, runes)
+
+	return &EditorGapBuffer{Data: data, GapStart: len(runes), GapEnd: totalSize}
+}
+
+func (e *EditorGapBuffer) Draw(screen tcell.Screen) {
+	drawX, drawY := 0, 0
+	drawCursorX, drawCursorY := 0, 0
+	for i, rune := range e.Data {
+		// if we hit cursor position (so gap start), save the cords
+		// thats our cursor position to draw
+		if i == e.GapStart {
+			drawCursorX = drawX
+			drawCursorY = drawY
 		}
+
+		// skip drawing if gap buffer
+		if i >= e.GapStart && i < e.GapEnd {
+			continue
+		}
+
+		// handle new line
+		if rune == '\n' {
+			drawX = 0
+			drawY++
+			continue
+		}
+
+		screen.Put(drawX, drawY, string(rune), tcell.StyleDefault)
+		drawX++
 	}
+	screen.ShowCursor(drawCursorX, drawCursorY)
 }
 
-func (e *EditorTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
-	currX := e.CursorX
-	currY := e.CursorY
+func (e *EditorGapBuffer) MoveCursor(amount int, direction editorApi.Direction) {
 	switch direction {
 	case editorApi.DirLeft:
-		if currX != 0 {
-			e.CursorX = currX - amount
-		}
+		target := max(0, e.GapStart-amount)
+		e.MoveGapTo(target)
 	case editorApi.DirRight:
-		e.CursorX = currX + amount
+		target := min(e.logicalLen(), e.GapStart+amount)
+		e.MoveGapTo(target)
 	case editorApi.DirUp:
-		if currY != 0 {
-			e.CursorY = currY - 1
-			newPos := len(e.Lines[e.CursorY])
-			if newPos == 0 {
-				e.CursorX = newPos
+		targetLineStart := e.findLineStart(e.GapStart)
+		// how many runes deep is our cursor on the line
+		column := e.GapStart - targetLineStart
+
+		for range amount {
+			// we are on the first line
+			if targetLineStart == 0 {
+				break
 			}
+			// find start of the line above us
+			targetLineStart = e.findLineStart(targetLineStart - 1)
 		}
+
+		targetLineEnd := e.findLineEnd(targetLineStart)
+		targetPos := min(targetLineStart+column, targetLineEnd)
+		e.MoveGapTo(targetPos)
+
 	case editorApi.DirDown:
-		e.CursorY = currY + 1
+		targetLineStart := e.findLineStart(e.GapStart) // Start with current line
+		column := e.GapStart - targetLineStart         // Save the column
 
-		for len(e.Lines) <= e.CursorY {
-			e.Lines = append(e.Lines, []rune{})
+		for range amount {
+			lineEnd := e.findLineEnd(targetLineStart)
+			if lineEnd >= e.logicalLen() {
+				break
+			}
+			targetLineStart = lineEnd + 1 // Step forward to next line
 		}
 
-		newPos := len(e.Lines[e.CursorY])
-		if newPos == 0 {
-			e.CursorX = newPos
+		targetLineEnd := e.findLineEnd(targetLineStart)
+		targetPos := min(targetLineStart+column, targetLineEnd)
+		e.MoveGapTo(targetPos)
+
+	}
+}
+
+func (e *EditorGapBuffer) InsertCharAtCurrPos(char rune) {
+	if e.GapStart == e.GapEnd {
+		// here we need to rsize the data slice and re create gap buffer
+		oldData := e.Data
+		oldDataLen := len(oldData)
+		newDataSize := oldDataLen * 2
+		if newDataSize == 0 {
+			newDataSize = 1024
+		}
+		newData := make([]rune, newDataSize)
+		// copy left side of gap buffer
+		copy(newData, oldData[:e.GapStart])
+
+		rightSideLen := oldDataLen - e.GapEnd
+		newGapEnd := newDataSize - rightSideLen
+		copy(newData[newGapEnd:], oldData[e.GapEnd:])
+		e.Data = newData
+		e.GapEnd = newGapEnd
+	}
+	e.Data[e.GapStart] = char
+	e.GapStart++
+}
+
+func (e *EditorGapBuffer) DeleteCharBeforeCursor() {
+	if e.GapStart > 0 {
+		e.GapStart--
+	}
+}
+
+func (e *EditorGapBuffer) InsertNewLine() {
+	e.InsertCharAtCurrPos('\n')
+}
+
+func (e *EditorGapBuffer) UpsertNewLine() {
+	e.MoveCursor(1, editorApi.DirUp)
+	e.InsertCharAtCurrPos('\n')
+}
+
+func (e *EditorGapBuffer) JumpToLineStart() {
+	c := e.findLineStart(e.GapStart)
+	e.MoveGapTo(c)
+}
+
+func (e *EditorGapBuffer) JumpToLineEnd() {
+	c := e.findLineEnd(e.GapStart)
+	e.MoveGapTo(c)
+}
+
+func (e *EditorGapBuffer) findLineStart(pos int) int {
+	for i := pos - 1; i >= 0; i-- {
+		if e.charAt(i) == '\n' {
+			return i + 1
 		}
 	}
+	return 0
+
+}
+func (e *EditorGapBuffer) findLineEnd(pos int) int {
+	for i := pos; i < e.logicalLen(); i++ {
+		if e.charAt(i) == '\n' {
+			return i
+		}
+	}
+	return e.logicalLen()
 }
 
-func (e *EditorTextBuffer) InsertCharAtCurrPos(char rune) {
-	for len(e.Lines) <= e.CursorY {
-		e.Lines = append(e.Lines, []rune{})
+func (e *EditorGapBuffer) charAt(logicalIndex int) rune {
+	if logicalIndex < e.GapStart {
+		return e.Data[logicalIndex]
 	}
-
-	for len(e.Lines[e.CursorY]) <= e.CursorX {
-		e.Lines[e.CursorY] = append(e.Lines[e.CursorY], ' ')
-	}
-
-	e.Lines[e.CursorY][e.CursorX] = char
-	e.CursorX++
+	// Add the gap width to skip over the empty space
+	gapWidth := e.GapEnd - e.GapStart
+	return e.Data[logicalIndex+gapWidth]
 }
 
-func (e *EditorTextBuffer) DeleteCharBeforeCursor() {
-	if e.CursorY >= len(e.Lines) {
-		return
-	}
-	if e.CursorX == 0 {
-		return
-	}
+func (e *EditorGapBuffer) logicalLen() int {
+	gapWidth := e.GapEnd - e.GapStart
+	return len(e.Data) - gapWidth
+}
+func (e *EditorGapBuffer) MoveGapTo(target int) {
+	// this moves gap according to the target
 
-	line := e.Lines[e.CursorY]
-	if len(line) == 0 {
-		return
-	}
-
-	if e.CursorX > len(line) {
-		e.CursorX = len(line)
+	// If the target is to the left of the current gap,
+	// we move the gap left by shifting characters to the right.
+	for e.GapStart > target {
+		e.MoveGapLeftByOne()
 	}
 
-	// Delete and write back
-	e.Lines[e.CursorY] = append(line[:e.CursorX-1], line[e.CursorX:]...)
-	e.CursorX--
+	// If the target is to the right of the current gap,
+	// we move the gap right by shifting characters to the left.
+	for e.GapStart < target {
+		e.MoveGapRightByOne()
+	}
 }
 
-func (e *EditorTextBuffer) InsertNewLine() {
-	e.MoveCursor(1, editorApi.DirDown)
-	e.Lines = append(e.Lines[:e.CursorY], append([][]rune{{}}, e.Lines[e.CursorY:]...)...)
-	e.JumpToLineStart()
+func (e *EditorGapBuffer) MoveGapLeftByOne() {
+	// copy the rune over to right side of the gap
+	if e.GapStart > 0 {
+		e.GapStart--
+		e.GapEnd--
+		e.Data[e.GapEnd] = e.Data[e.GapStart]
+	}
 }
 
-func (e *EditorTextBuffer) UpsertNewLine() {
-	e.Lines = append(e.Lines[:e.CursorY], append([][]rune{{}}, e.Lines[e.CursorY:]...)...)
-	e.JumpToLineStart()
-}
-
-func (e *EditorTextBuffer) JumpToLineStart() {
-	e.CursorX = 0
-}
-
-func (e *EditorTextBuffer) JumpToLineEnd() {
-	newPos := len(e.Lines[e.CursorY])
-	e.CursorX = newPos
+func (e *EditorGapBuffer) MoveGapRightByOne() {
+	if e.GapEnd < len(e.Data) {
+		e.Data[e.GapStart] = e.Data[e.GapEnd]
+		e.GapStart++
+		e.GapEnd++
+	}
 }

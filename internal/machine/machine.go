@@ -176,6 +176,9 @@ func handleModeSwitch(event *tcell.EventKey, api editorApi.EditorApi) editorApi.
 		case "a":
 			buf.MoveCursor(1, editorApi.DirRight)
 			return &InsertMode{}
+		case "A":
+			buf.JumpToLineEnd()
+			return &InsertMode{}
 		case "v":
 			return &VisualMode{}
 		case "V":
