@@ -3,21 +3,21 @@ package tools
 import (
 	"fmt"
 
-	utils "github.com/antoni-ostrowski/gvim/internal"
-	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
-	"github.com/antoni-ostrowski/gvim/internal/rendering"
+	"github.com/antoni-ostrowski/gvim/internal/buffer"
+	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	utils "github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
 )
 
 type CommandPrompt struct {
-	Input  rendering.TextInput
+	Input  buffer.LineBuffer
 	active bool
 }
 
 func NewCommandPrompt(screen tcell.Screen) *CommandPrompt {
 	_, y := screen.Size()
 	return &CommandPrompt{
-		Input: rendering.TextInput{X: 1, Y: y - 1, Buffer: []rune{}},
+		Input: buffer.LineBuffer{X: 1, Y: y - 1, Buffer: []rune{}},
 	}
 }
 

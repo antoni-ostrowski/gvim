@@ -1,21 +1,21 @@
-package rendering
+package buffer
 
 import (
-	utils "github.com/antoni-ostrowski/gvim/internal"
-	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
+	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	utils "github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
 	"github.com/mattn/go-runewidth"
 )
 
-type TextInput struct {
+type LineBuffer struct {
 	X, Y      int    // Screen position of input field
 	CursorPos int    // Position in runes (0 = before first char)
 	Buffer    []rune // The text content
 }
 
-var _ editorApi.Drawable = (*TextInput)(nil)
+var _ editorApi.Drawable = (*LineBuffer)(nil)
 
-func (t *TextInput) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi) bool {
+func (t *LineBuffer) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi) bool {
 	utils.Debuglog("TextInput.HandleKey: Key=%v, Str=%q, CursorPos=%d, BufferLen=%d, Buffer=%q", ev.Key(), ev.Str(), t.CursorPos, len(t.Buffer), string(t.Buffer))
 	switch ev.Key() {
 	case tcell.KeyRune:
@@ -62,7 +62,7 @@ func (t *TextInput) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi)
 	}
 }
 
-func (t *TextInput) Draw(s tcell.Screen) {
+func (t *LineBuffer) Draw(s tcell.Screen) {
 	text := string(t.Buffer)
 	s.PutStrStyled(t.X, t.Y, text, tcell.StyleDefault)
 
@@ -72,7 +72,7 @@ func (t *TextInput) Draw(s tcell.Screen) {
 }
 
 // Calculate display width of runes (CJK/emoji = 2 cells)
-func (t *TextInput) runeWidth(runes []rune) int {
+func (t *LineBuffer) runeWidth(runes []rune) int {
 	w := 0
 	for _, r := range runes {
 		w += runewidth.RuneWidth(r) // github.com/mattn/go-runewidth

@@ -6,18 +6,14 @@ import (
 
 type EditorApi interface {
 	SendQuitSignal()
-	Buffer() EditorBuffer
+	Buffer() TextBuffer
 	WriteFile() error
 	CurrentBufferPath() string
 	Log(mess string)
 	TriggerEvent(event tcell.Event)
 }
 
-type EditorMode interface {
-	KeyHandler(event *tcell.EventKey, buf EditorBuffer)
-}
-
-type EditorBuffer interface {
+type TextBuffer interface {
 	Drawable
 	MoveCursor(amount int, direction Direction)
 	InsertCharAtCurrPos(char rune)
@@ -29,9 +25,13 @@ type EditorBuffer interface {
 	Bytes() []byte
 }
 
-type VimMachine interface {
-	Handler(event *tcell.EventKey, buf EditorBuffer)
-	GetMode() EditorMode
+type VimStateMachine interface {
+	Handler(event *tcell.EventKey, buf TextBuffer)
+	GetMode() VimMode
+}
+
+type VimMode interface {
+	KeyHandler(event *tcell.EventKey, buf TextBuffer)
 }
 
 type EditorTool interface {

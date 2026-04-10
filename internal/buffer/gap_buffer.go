@@ -1,38 +1,38 @@
-package app
+package buffer
 
 import (
 	"slices"
 
-	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
+	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
 	"github.com/gdamore/tcell/v3"
 )
 
 // we use go convention, so gap start is inclusive, gap end is exclusive
 // GapStart: The index of the first empty slot.
 // GapEnd: The index of the first valid character after the gap.
-type EditorGapBuffer struct {
+type GapTextBuffer struct {
 	Data     []rune
 	GapStart int
 	GapEnd   int
 }
 
-var _ editorApi.EditorBuffer = (*EditorGapBuffer)(nil)
+var _ editorApi.TextBuffer = (*GapTextBuffer)(nil)
 
-func NewEditorBuffer(text string) *EditorGapBuffer {
+func NewGapBuffer(text string) *GapTextBuffer {
 	initGapSize := 1024
 	runes := []rune(text)
 	totalSize := initGapSize + len(runes)
 	data := make([]rune, totalSize)
 	copy(data, runes)
 
-	return &EditorGapBuffer{Data: data, GapStart: len(runes), GapEnd: totalSize}
+	return &GapTextBuffer{Data: data, GapStart: len(runes), GapEnd: totalSize}
 }
-func (e *EditorGapBuffer) Bytes() []byte {
+func (e *GapTextBuffer) Bytes() []byte {
 	first := ([]byte(string(e.Data[:e.GapStart])))
 	second := ([]byte(string(e.Data[e.GapEnd:])))
 	return slices.Concat(first, second)
 }
-func (e *EditorGapBuffer) Draw(screen tcell.Screen) {
+func (e *GapTextBuffer) Draw(screen tcell.Screen) {
 	drawX, drawY := 0, 0
 	drawCursorX, drawCursorY := 0, 0
 	for i, rune := range e.Data {
@@ -61,7 +61,7 @@ func (e *EditorGapBuffer) Draw(screen tcell.Screen) {
 	screen.ShowCursor(drawCursorX, drawCursorY)
 }
 
-func (e *EditorGapBuffer) MoveCursor(amount int, direction editorApi.Direction) {
+func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
 	switch direction {
 	case editorApi.DirLeft:
 		target := max(0, e.GapStart-amount)
@@ -106,7 +106,7 @@ func (e *EditorGapBuffer) MoveCursor(amount int, direction editorApi.Direction) 
 	}
 }
 
-func (e *EditorGapBuffer) InsertCharAtCurrPos(char rune) {
+func (e *GapTextBuffer) InsertCharAtCurrPos(char rune) {
 	if e.GapStart == e.GapEnd {
 		// here we need to rsize the data slice and re create gap buffer
 		oldData := e.Data
@@ -129,34 +129,34 @@ func (e *EditorGapBuffer) InsertCharAtCurrPos(char rune) {
 	e.GapStart++
 }
 
-func (e *EditorGapBuffer) DeleteCharBeforeCursor() {
+func (e *GapTextBuffer) DeleteCharBeforeCursor() {
 	if e.GapStart > 0 {
 		e.GapStart--
 	}
 }
 
-func (e *EditorGapBuffer) InsertNewLine() {
+func (e *GapTextBuffer) InsertNewLine() {
 	e.MoveCursor(1, editorApi.DirDown)
 	e.InsertCharAtCurrPos('\n')
 	e.MoveCursor(1, editorApi.DirUp)
 }
 
-func (e *EditorGapBuffer) UpsertNewLine() {
+func (e *GapTextBuffer) UpsertNewLine() {
 	e.InsertCharAtCurrPos('\n')
 	e.MoveCursor(1, editorApi.DirUp)
 }
 
-func (e *EditorGapBuffer) JumpToLineStart() {
+func (e *GapTextBuffer) JumpToLineStart() {
 	c := e.findLineStart(e.GapStart)
 	e.MoveGapTo(c)
 }
 
-func (e *EditorGapBuffer) JumpToLineEnd() {
+func (e *GapTextBuffer) JumpToLineEnd() {
 	c := e.findLineEnd(e.GapStart)
 	e.MoveGapTo(c)
 }
 
-func (e *EditorGapBuffer) findLineStart(pos int) int {
+func (e *GapTextBuffer) findLineStart(pos int) int {
 	for i := pos - 1; i >= 0; i-- {
 		if e.charAt(i) == '\n' {
 			return i + 1
@@ -165,7 +165,7 @@ func (e *EditorGapBuffer) findLineStart(pos int) int {
 	return 0
 
 }
-func (e *EditorGapBuffer) findLineEnd(pos int) int {
+func (e *GapTextBuffer) findLineEnd(pos int) int {
 	for i := pos; i < e.logicalLen(); i++ {
 		if e.charAt(i) == '\n' {
 			return i
@@ -174,7 +174,7 @@ func (e *EditorGapBuffer) findLineEnd(pos int) int {
 	return e.logicalLen()
 }
 
-func (e *EditorGapBuffer) charAt(logicalIndex int) rune {
+func (e *GapTextBuffer) charAt(logicalIndex int) rune {
 	if logicalIndex < e.GapStart {
 		return e.Data[logicalIndex]
 	}
@@ -183,11 +183,11 @@ func (e *EditorGapBuffer) charAt(logicalIndex int) rune {
 	return e.Data[logicalIndex+gapWidth]
 }
 
-func (e *EditorGapBuffer) logicalLen() int {
+func (e *GapTextBuffer) logicalLen() int {
 	gapWidth := e.GapEnd - e.GapStart
 	return len(e.Data) - gapWidth
 }
-func (e *EditorGapBuffer) MoveGapTo(target int) {
+func (e *GapTextBuffer) MoveGapTo(target int) {
 	// this moves gap according to the target
 
 	// If the target is to the left of the current gap,
@@ -203,7 +203,7 @@ func (e *EditorGapBuffer) MoveGapTo(target int) {
 	}
 }
 
-func (e *EditorGapBuffer) MoveGapLeftByOne() {
+func (e *GapTextBuffer) MoveGapLeftByOne() {
 	// copy the rune over to right side of the gap
 	if e.GapStart > 0 {
 		e.GapStart--
@@ -212,7 +212,7 @@ func (e *EditorGapBuffer) MoveGapLeftByOne() {
 	}
 }
 
-func (e *EditorGapBuffer) MoveGapRightByOne() {
+func (e *GapTextBuffer) MoveGapRightByOne() {
 	if e.GapEnd < len(e.Data) {
 		e.Data[e.GapStart] = e.Data[e.GapEnd]
 		e.GapStart++

@@ -5,18 +5,19 @@ import (
 	"os"
 	"path/filepath"
 
-	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
-	"github.com/antoni-ostrowski/gvim/internal/machine"
+	"github.com/antoni-ostrowski/gvim/internal/buffer"
+	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	"github.com/antoni-ostrowski/gvim/internal/vim"
 	"github.com/gdamore/tcell/v3"
 )
 
 type App struct {
-	Machine      editorApi.VimMachine
+	Machine      editorApi.VimStateMachine
 	Tools        map[string]editorApi.EditorTool
 	QuitChn      chan struct{}
 	EventChan    chan tcell.Event
 	Screen       tcell.Screen
-	EditorBuffer editorApi.EditorBuffer
+	EditorBuffer editorApi.TextBuffer
 	ArgPath      string
 	LogMess      string
 }
@@ -25,11 +26,11 @@ var _ editorApi.EditorApi = (*App)(nil)
 
 func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *App {
 	app := &App{
-		Machine:      &machine.VimMachine{Mode: &machine.NormalMode{}},
+		Machine:      &vim.Machine{Mode: &vim.NormalMode{}},
 		QuitChn:      make(chan struct{}, 1),
 		Screen:       screen,
 		Tools:        make(map[string]editorApi.EditorTool),
-		EditorBuffer: NewEditorBuffer(""),
+		EditorBuffer: buffer.NewGapBuffer(""),
 		ArgPath:      argPath,
 		EventChan:    eventChan,
 		LogMess:      "",
@@ -37,13 +38,13 @@ func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *Ap
 	absPath, err := filepath.Abs(argPath)
 	app.LogMess = absPath
 	if err != nil {
-		app.EditorBuffer = NewEditorBuffer("")
+		app.EditorBuffer = buffer.NewGapBuffer("")
 	} else {
 		err = isFile(absPath)
 		if err == nil {
 			contents, err := os.ReadFile(absPath)
 			if err == nil {
-				app.EditorBuffer = NewEditorBuffer(string(contents))
+				app.EditorBuffer = buffer.NewGapBuffer(string(contents))
 			}
 		}
 	}
@@ -92,6 +93,6 @@ func (a *App) SendQuitSignal() {
 	a.QuitChn <- struct{}{}
 }
 
-func (a *App) Buffer() editorApi.EditorBuffer {
+func (a *App) Buffer() editorApi.TextBuffer {
 	return a.EditorBuffer
 }
