@@ -6,8 +6,13 @@ import (
 )
 
 type Machine struct {
-	Mode        editorApi.VimMode
-	pendingKeys []rune
+	Mode editorApi.VimMode
+}
+
+func NewMachine() *Machine {
+	return &Machine{
+		Mode: &Normal{},
+	}
 }
 
 var _ editorApi.VimStateMachine = (*Machine)(nil)
@@ -15,31 +20,31 @@ var _ editorApi.VimStateMachine = (*Machine)(nil)
 func (m *Machine) Handler(event *tcell.EventKey, buf editorApi.TextBuffer) {
 	modeSwitchHandler := func() editorApi.VimMode {
 		switch m.Mode.(type) {
-		case *NormalMode:
+		case *Normal:
 			if event.Key() == tcell.KeyRune {
 				str := event.Str()
 				switch str {
 				case "i":
-					return &InsertMode{}
+					return &Insert{}
 				case "a":
 					buf.MoveCursor(1, editorApi.DirRight)
-					return &InsertMode{}
+					return &Insert{}
 				case "A":
 					buf.JumpToLineEnd()
-					return &InsertMode{}
+					return &Insert{}
 				case "v":
-					return &VisualMode{}
+					return &Visual{}
 				case "V":
-					return &VisualMode{}
+					return &Visual{}
 				}
 			}
-		case *InsertMode:
+		case *Insert:
 			if event.Key() == tcell.KeyEsc {
-				return &NormalMode{}
+				return &Normal{}
 			}
-		case *VisualMode:
+		case *Visual:
 			if event.Key() == tcell.KeyEsc {
-				return &NormalMode{}
+				return &Normal{}
 			}
 		}
 		return nil
@@ -57,11 +62,11 @@ func (m *Machine) GetMode() editorApi.VimMode {
 	return m.Mode
 }
 
-type NormalMode struct{}
+type Normal struct{}
 
-var _ editorApi.VimMode = (*NormalMode)(nil)
+var _ editorApi.VimMode = (*Normal)(nil)
 
-func (m *NormalMode) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
+func (m *Normal) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
 	handleMovement(event, buf)
 	handleSharedKeys(event, buf)
 
@@ -72,11 +77,11 @@ func (m *NormalMode) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer)
 
 }
 
-type InsertMode struct{}
+type Insert struct{}
 
-var _ editorApi.VimMode = (*InsertMode)(nil)
+var _ editorApi.VimMode = (*Insert)(nil)
 
-func (m *InsertMode) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
+func (m *Insert) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
 	handleSharedKeys(event, buf)
 
 	if event.Key() == tcell.KeyBackspace {
@@ -97,11 +102,11 @@ func (m *InsertMode) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer)
 
 }
 
-type VisualMode struct{}
+type Visual struct{}
 
-var _ editorApi.VimMode = (*VisualMode)(nil)
+var _ editorApi.VimMode = (*Visual)(nil)
 
-func (m *VisualMode) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
+func (m *Visual) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
 	handleMovement(event, buf)
 	handleSharedKeys(event, buf)
 

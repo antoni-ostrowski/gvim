@@ -26,7 +26,7 @@ var _ editorApi.EditorApi = (*App)(nil)
 
 func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *App {
 	app := &App{
-		Machine:      &vim.Machine{Mode: &vim.NormalMode{}},
+		Machine:      vim.NewMachine(),
 		QuitChn:      make(chan struct{}, 1),
 		Screen:       screen,
 		Tools:        make(map[string]editorApi.EditorTool),
