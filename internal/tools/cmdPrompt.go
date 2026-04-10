@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"fmt"
+
 	utils "github.com/antoni-ostrowski/gvim/internal"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor-api"
 	"github.com/antoni-ostrowski/gvim/internal/rendering"
@@ -58,8 +60,9 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 		if string(c.Input.Buffer[0]) == "w" {
 			err := api.WriteFile()
 			if err != nil {
-				utils.Debuglog("err writing file %v", err)
+				api.Log(fmt.Errorf("file: err writing to a file: %w", err).Error())
 			}
+			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentBufferPath()))
 
 			return true
 		}

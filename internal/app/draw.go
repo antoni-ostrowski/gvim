@@ -30,6 +30,7 @@ func DrawAppState(screen tcell.Screen, appState *App) {
 func drawStatusLine(screen tcell.Screen, appState *App) {
 	_, h := screen.Size()
 
+	screen.PutStrStyled(0, h-3, appState.LogMess, tcell.StyleDefault)
 	screen.PutStrStyled(0, h-2, getCurrentEditorModeName(appState), tcell.StyleDefault)
 }
 

@@ -40,6 +40,8 @@ func main() {
 		select {
 		case event := <-eventChannel:
 			if event, ok := event.(*tcell.EventKey); ok {
+				appState.Log("")
+
 				keyHandled := false
 
 				if event.Key() == tcell.KeyCtrlC {

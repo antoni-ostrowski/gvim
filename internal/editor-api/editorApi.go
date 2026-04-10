@@ -8,6 +8,8 @@ type EditorApi interface {
 	SendQuitSignal()
 	Buffer() EditorBuffer
 	WriteFile() error
+	CurrentBufferPath() string
+	Log(mess string)
 }
 
 type EditorMode interface {

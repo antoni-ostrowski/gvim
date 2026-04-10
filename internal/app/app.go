@@ -17,6 +17,7 @@ type App struct {
 	Screen       tcell.Screen
 	EditorBuffer editorApi.EditorBuffer
 	ArgPath      string
+	LogMess      string
 }
 
 var _ editorApi.EditorApi = (*App)(nil)
@@ -45,6 +46,7 @@ func NewApp(screen tcell.Screen, argPath string) *App {
 
 	return app
 }
+
 func isFile(path string) error {
 	info, err := os.Stat(path)
 	if err == nil && info.IsDir() {
@@ -53,6 +55,14 @@ func isFile(path string) error {
 	} else {
 		return nil
 	}
+}
+
+func (a *App) Log(mess string) {
+	a.LogMess = mess
+}
+
+func (a *App) CurrentBufferPath() string {
+	return a.ArgPath
 }
 
 func (a *App) WriteFile() error {
