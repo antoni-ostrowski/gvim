@@ -16,11 +16,11 @@ func DrawAppState(screen tcell.Screen, appState *App) {
 	}
 
 	switch appState.Machine.GetMode().(type) {
-	case *vim.NormalMode:
+	case *vim.Normal:
 		screen.SetCursorStyle(tcell.CursorStyleDefault)
-	case *vim.InsertMode:
+	case *vim.Insert:
 		screen.SetCursorStyle(tcell.CursorStyleBlinkingBlock)
-	case *vim.VisualMode:
+	case *vim.Visual:
 		screen.SetCursorStyle(tcell.CursorStyleDefault)
 	}
 
@@ -36,11 +36,11 @@ func drawStatusLine(screen tcell.Screen, appState *App) {
 
 func getCurrentEditorModeName(appState *App) string {
 	switch appState.Machine.GetMode().(type) {
-	case *vim.NormalMode:
+	case *vim.Normal:
 		return "NORMAL"
-	case *vim.InsertMode:
+	case *vim.Insert:
 		return "INSERT"
-	case *vim.VisualMode:
+	case *vim.Visual:
 		return "VISUAL"
 	}
 	return "UNKNOWN"
