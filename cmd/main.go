@@ -33,14 +33,13 @@ func main() {
 		path = os.Args[1]
 	}
 
-	appState := app.NewApp(screen, path)
+	appState := app.NewApp(screen, path, eventChannel)
 	appState.Tools["cmdPrompt"] = tools.NewCommandPrompt(screen)
 
 	for {
 		select {
 		case event := <-eventChannel:
 			if event, ok := event.(*tcell.EventKey); ok {
-				appState.Log("")
 
 				keyHandled := false
 

@@ -10,6 +10,7 @@ type EditorApi interface {
 	WriteFile() error
 	CurrentBufferPath() string
 	Log(mess string)
+	TriggerEvent(event tcell.Event)
 }
 
 type EditorMode interface {

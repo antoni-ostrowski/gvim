@@ -37,6 +37,10 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 	if isActivationCombo {
 		utils.Debuglog("cmd not active if hit!")
 		c.active = true
+		if len(c.Input.Buffer) > 0 {
+			c.Input.Buffer = []rune{}
+			c.Input.CursorPos = 0
+		}
 		return true
 	}
 
@@ -63,6 +67,7 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 				api.Log(fmt.Errorf("file: err writing to a file: %w", err).Error())
 			}
 			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentBufferPath()))
+			api.TriggerEvent(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone))
 
 			return true
 		}

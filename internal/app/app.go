@@ -14,6 +14,7 @@ type App struct {
 	Machine      editorApi.VimMachine
 	Tools        map[string]editorApi.EditorTool
 	QuitChn      chan struct{}
+	EventChan    chan tcell.Event
 	Screen       tcell.Screen
 	EditorBuffer editorApi.EditorBuffer
 	ArgPath      string
@@ -22,7 +23,7 @@ type App struct {
 
 var _ editorApi.EditorApi = (*App)(nil)
 
-func NewApp(screen tcell.Screen, argPath string) *App {
+func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *App {
 	app := &App{
 		Machine:      &machine.VimMachine{Mode: &machine.NormalMode{}},
 		QuitChn:      make(chan struct{}, 1),
@@ -30,8 +31,11 @@ func NewApp(screen tcell.Screen, argPath string) *App {
 		Tools:        make(map[string]editorApi.EditorTool),
 		EditorBuffer: NewEditorBuffer(""),
 		ArgPath:      argPath,
+		EventChan:    eventChan,
+		LogMess:      "",
 	}
 	absPath, err := filepath.Abs(argPath)
+	app.LogMess = absPath
 	if err != nil {
 		app.EditorBuffer = NewEditorBuffer("")
 	} else {
@@ -55,6 +59,10 @@ func isFile(path string) error {
 	} else {
 		return nil
 	}
+}
+func (a *App) TriggerEvent(event tcell.Event) {
+	a.EventChan <- event
+
 }
 
 func (a *App) Log(mess string) {
