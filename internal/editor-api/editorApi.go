@@ -1,17 +1,17 @@
 package editorApi
 
-import "github.com/gdamore/tcell/v3"
+import (
+	"github.com/gdamore/tcell/v3"
+)
 
 type EditorApi interface {
 	SendQuitSignal()
-	ToggleCommandPrompt(active bool)
-	CurrentMode() EditorMode
 	Buffer() EditorBuffer
 	WriteFile() error
 }
 
 type EditorMode interface {
-	KeyHandler(event *tcell.EventKey, editorApi EditorApi) EditorMode
+	KeyHandler(event *tcell.EventKey, buf EditorBuffer)
 }
 
 type EditorBuffer interface {
@@ -27,11 +27,11 @@ type EditorBuffer interface {
 }
 
 type VimMachine interface {
-	Handler(event *tcell.EventKey, api EditorApi)
+	Handler(event *tcell.EventKey, buf EditorBuffer)
 	GetMode() EditorMode
 }
 
-type UiElement interface {
+type EditorTool interface {
 	Drawable
 	KeyHandler
 }

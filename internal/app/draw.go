@@ -9,9 +9,9 @@ func DrawAppState(screen tcell.Screen, appState *App) {
 	screen.Clear()
 
 	appState.EditorBuffer.Draw(screen)
-	DrawStatusLine(screen, appState)
+	drawStatusLine(screen, appState)
 
-	for _, elem := range appState.UiElements {
+	for _, elem := range appState.Tools {
 		elem.Draw(screen)
 	}
 
@@ -25,4 +25,22 @@ func DrawAppState(screen tcell.Screen, appState *App) {
 	}
 
 	screen.Show()
+}
+
+func drawStatusLine(screen tcell.Screen, appState *App) {
+	_, h := screen.Size()
+
+	screen.PutStrStyled(0, h-2, getCurrentEditorModeName(appState), tcell.StyleDefault)
+}
+
+func getCurrentEditorModeName(appState *App) string {
+	switch appState.Machine.GetMode().(type) {
+	case *machine.NormalMode:
+		return "NORMAL"
+	case *machine.InsertMode:
+		return "INSERT"
+	case *machine.VisualMode:
+		return "VISUAL"
+	}
+	return "UNKNOWN"
 }

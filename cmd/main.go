@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
+	"github.com/antoni-ostrowski/gvim/internal/tools"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -33,13 +34,20 @@ func main() {
 	}
 
 	appState := app.NewApp(screen, path)
+	appState.Tools["cmdPrompt"] = tools.NewCommandPrompt(screen)
 
 	for {
 		select {
 		case event := <-eventChannel:
 			if event, ok := event.(*tcell.EventKey); ok {
 				keyHandled := false
-				for _, elem := range appState.UiElements {
+
+				if event.Key() == tcell.KeyCtrlC {
+					appState.SendQuitSignal()
+					keyHandled = true
+				}
+
+				for _, elem := range appState.Tools {
 					if elem.HandleKey(event, appState) {
 						keyHandled = true
 						break
@@ -47,7 +55,7 @@ func main() {
 				}
 
 				if !keyHandled {
-					appState.Machine.Handler(event, appState)
+					appState.Machine.Handler(event, appState.EditorBuffer)
 				}
 
 			}
