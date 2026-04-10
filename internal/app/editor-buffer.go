@@ -136,13 +136,14 @@ func (e *EditorGapBuffer) DeleteCharBeforeCursor() {
 }
 
 func (e *EditorGapBuffer) InsertNewLine() {
-	e.InsertCharAtCurrPos('\n')
 	e.MoveCursor(1, editorApi.DirDown)
+	e.InsertCharAtCurrPos('\n')
+	e.MoveCursor(1, editorApi.DirUp)
 }
 
 func (e *EditorGapBuffer) UpsertNewLine() {
-	e.MoveCursor(1, editorApi.DirUp)
 	e.InsertCharAtCurrPos('\n')
+	e.MoveCursor(1, editorApi.DirUp)
 }
 
 func (e *EditorGapBuffer) JumpToLineStart() {

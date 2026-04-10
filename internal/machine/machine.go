@@ -121,7 +121,6 @@ func handleSharedKeys(event *tcell.EventKey, buf editorApi.EditorBuffer) {
 }
 
 func handleMovement(event *tcell.EventKey, buf editorApi.EditorBuffer) {
-
 	switch event.Key() {
 	case tcell.KeyRune:
 		str := event.Str()
