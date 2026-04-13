@@ -13,6 +13,7 @@ type EditorApi interface {
 	Log(mess string)
 	TriggerEvent(event tcell.Event)
 	RootCmd() *cobra.Command
+	OpenFile(filepath string) error
 }
 
 type TextBuffer interface {

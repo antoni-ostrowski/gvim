@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -75,7 +76,6 @@ func (a *App) RootCmd() *cobra.Command {
 
 func (a *App) TriggerEvent(event tcell.Event) {
 	a.EventChan <- event
-
 }
 
 func (a *App) Log(mess string) {
@@ -84,6 +84,21 @@ func (a *App) Log(mess string) {
 
 func (a *App) CurrentBufferPath() string {
 	return a.ArgPath
+}
+func (a *App) OpenFile(file string) error {
+	absPath, err := filepath.Abs(file)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+
+	contents, err := os.ReadFile(absPath)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+
+	a.EditorBuffer = buffer.NewGapBuffer(string(contents))
+	return nil
+
 }
 
 func (a *App) WriteFile() error {

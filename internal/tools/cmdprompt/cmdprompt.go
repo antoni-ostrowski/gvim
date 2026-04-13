@@ -32,16 +32,18 @@ func createCmds(api editorApi.EditorApi) *cobra.Command {
 	rootCmd := api.RootCmd()
 
 	quitCmd := &cobra.Command{
-		Use:   "q",
-		Short: "Quit the editor",
+		Use:     "quit",
+		Aliases: []string{"q"},
+		Short:   "Quit the editor",
 		Run: func(cmd *cobra.Command, args []string) {
 			api.SendQuitSignal()
 		},
 	}
 
 	writeCmd := &cobra.Command{
-		Use:   "w",
-		Short: "Write buffer to file",
+		Use:     "write",
+		Aliases: []string{"w"},
+		Short:   "Write buffer to file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := api.WriteFile()
 			if err != nil {
@@ -52,7 +54,25 @@ func createCmds(api editorApi.EditorApi) *cobra.Command {
 		},
 	}
 
-	rootCmd.AddCommand(quitCmd, writeCmd)
+	openCmd := &cobra.Command{
+		Use:     "open",
+		Aliases: []string{"o"},
+		Short:   "Open file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				filename := args[0]
+				err := api.OpenFile(filename)
+				if err != nil {
+					return err
+				}
+				api.Log(fmt.Sprintf("opened %s", filename))
+			}
+
+			return nil
+		},
+	}
+
+	rootCmd.AddCommand(quitCmd, writeCmd, openCmd)
 
 	return rootCmd
 }
