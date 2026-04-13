@@ -7,13 +7,15 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// SHOULD DEPRACATE, JUST DEFAULT TO GAP BUFFER ONCE ITS IMPROVED FR
+
 type LineBuffer struct {
 	X, Y      int    // Screen position of input field
 	CursorPos int    // Position in runes (0 = before first char)
 	Buffer    []rune // The text content
 }
 
-var _ editorApi.Drawable = (*LineBuffer)(nil)
+var _ editorApi.EditorTool = (*LineBuffer)(nil)
 
 func (t *LineBuffer) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi) bool {
 	utils.Debuglog("TextInput.HandleKey: Key=%v, Str=%q, CursorPos=%d, BufferLen=%d, Buffer=%q", ev.Key(), ev.Str(), t.CursorPos, len(t.Buffer), string(t.Buffer))
@@ -65,6 +67,7 @@ func (t *LineBuffer) HandleKey(ev *tcell.EventKey, editorApi editorApi.EditorApi
 func (t *LineBuffer) Draw(s tcell.Screen) {
 	text := string(t.Buffer)
 	s.PutStrStyled(t.X, t.Y, text, tcell.StyleDefault)
+	s.PutStrStyled(t.X-1, t.Y, ":", tcell.StyleDefault)
 
 	cursorScreenX := t.X + t.runeWidth(t.Buffer[:t.CursorPos])
 

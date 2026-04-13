@@ -31,7 +31,7 @@ func drawStatusLine(screen tcell.Screen, appState *App) {
 	_, h := screen.Size()
 
 	screen.PutStrStyled(0, h-3, appState.LogMess, tcell.StyleDefault)
-	screen.PutStrStyled(0, h-2, getCurrentEditorModeName(appState), tcell.StyleDefault)
+	screen.PutStrStyled(0, h-2, getCurrentEditorModeName(appState)+" "+appState.CurOpenedFile, tcell.StyleDefault)
 }
 
 func getCurrentEditorModeName(appState *App) string {

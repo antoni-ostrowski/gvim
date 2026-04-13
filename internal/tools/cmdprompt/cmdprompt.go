@@ -12,6 +12,7 @@ import (
 )
 
 type CommandPrompt struct {
+	// TODO: should use gap buffer with vim state machine
 	Input  buffer.LineBuffer
 	active bool
 }
@@ -49,7 +50,7 @@ func createCmds(api editorApi.EditorApi) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("error writing to file: %w", err)
 			}
-			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentBufferPath()))
+			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentOpenedFilePath()))
 			return nil
 		},
 	}

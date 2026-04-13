@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -14,27 +15,32 @@ import (
 )
 
 type App struct {
-	Machine      editorApi.VimStateMachine
-	Tools        map[string]editorApi.EditorTool
-	QuitChn      chan struct{}
-	EventChan    chan tcell.Event
-	Screen       tcell.Screen
-	EditorBuffer editorApi.TextBuffer
-	ArgPath      string
-	LogMess      string
-	rootCmd      *cobra.Command
+	Machine       editorApi.VimStateMachine
+	Tools         map[string]editorApi.EditorTool
+	QuitChn       chan struct{}
+	EventChan     chan tcell.Event
+	Screen        tcell.Screen
+	EditorBuffer  editorApi.TextBuffer
+	Cwd           string
+	CurOpenedFile string
+	LogMess       string
+	rootCmd       *cobra.Command
 }
 
 var _ editorApi.EditorApi = (*App)(nil)
 
 func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *App {
+	buf, cwd, absFilePath, err := parseFilepathArg(argPath)
+	if err != nil {
+		log.Fatalf("failed to parse arg filepath: %v", err)
+	}
+
 	app := &App{
 		Machine:      vim.NewMachine(),
 		QuitChn:      make(chan struct{}, 1),
 		Screen:       screen,
 		Tools:        make(map[string]editorApi.EditorTool),
-		EditorBuffer: buffer.NewGapBuffer(""),
-		ArgPath:      argPath,
+		EditorBuffer: buf,
 		EventChan:    eventChan,
 		LogMess:      "",
 		rootCmd: &cobra.Command{
@@ -42,32 +48,40 @@ func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *Ap
 			SilenceErrors: true,
 			SilenceUsage:  true,
 		},
-	}
-	absPath, err := filepath.Abs(argPath)
-	app.LogMess = absPath
-	if err != nil {
-		app.EditorBuffer = buffer.NewGapBuffer("")
-	} else {
-		err = isFile(absPath)
-		if err == nil {
-			contents, err := os.ReadFile(absPath)
-			if err == nil {
-				app.EditorBuffer = buffer.NewGapBuffer(string(contents))
-			}
-		}
+		Cwd:           cwd,
+		CurOpenedFile: absFilePath,
 	}
 
 	return app
 }
 
-func isFile(path string) error {
-	info, err := os.Stat(path)
-	if err == nil && info.IsDir() {
-		// Handle opening a directory (maybe show a file explorer?)
-		return errors.New("directory found instead of a file")
-	} else {
-		return nil
+func parseFilepathArg(argPath string) (editorApi.TextBuffer, string, string, error) {
+	isFile := func(path string) error {
+		info, err := os.Stat(path)
+		if err == nil && info.IsDir() {
+			// Handle opening a directory (maybe show a file explorer?)
+			return errors.New("directory found instead of a file")
+		} else {
+			return nil
+		}
 	}
+
+	absPath, err := filepath.Abs(argPath)
+	if err != nil {
+		return buffer.NewGapBuffer(""), "", "", fmt.Errorf("parse arg filepath: %w", err)
+	}
+
+	err = isFile(absPath)
+	if err != nil {
+		return buffer.NewGapBuffer(""), absPath, "", nil
+	}
+
+	contents, err := os.ReadFile(absPath)
+	if err != nil {
+		return buffer.NewGapBuffer(""), "", "", fmt.Errorf("read file: %w", err)
+	}
+
+	return buffer.NewGapBuffer(string(contents)), "", absPath, nil
 }
 
 func (a *App) RootCmd() *cobra.Command {
@@ -82,8 +96,8 @@ func (a *App) Log(mess string) {
 	a.LogMess = mess
 }
 
-func (a *App) CurrentBufferPath() string {
-	return a.ArgPath
+func (a *App) CurrentOpenedFilePath() string {
+	return a.CurOpenedFile
 }
 func (a *App) OpenFile(file string) error {
 	absPath, err := filepath.Abs(file)
@@ -98,11 +112,10 @@ func (a *App) OpenFile(file string) error {
 
 	a.EditorBuffer = buffer.NewGapBuffer(string(contents))
 	return nil
-
 }
 
 func (a *App) WriteFile() error {
-	f, err := os.Create(a.ArgPath)
+	f, err := os.Create(a.CurOpenedFile)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@ type EditorApi interface {
 	SendQuitSignal()
 	Buffer() TextBuffer
 	WriteFile() error
-	CurrentBufferPath() string
+	CurrentOpenedFilePath() string
 	Log(mess string)
 	TriggerEvent(event tcell.Event)
 	RootCmd() *cobra.Command
