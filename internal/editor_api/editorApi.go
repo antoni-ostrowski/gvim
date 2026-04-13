@@ -2,6 +2,7 @@ package editorApi
 
 import (
 	"github.com/gdamore/tcell/v3"
+	"github.com/spf13/cobra"
 )
 
 type EditorApi interface {
@@ -11,6 +12,7 @@ type EditorApi interface {
 	CurrentBufferPath() string
 	Log(mess string)
 	TriggerEvent(event tcell.Event)
+	RootCmd() *cobra.Command
 }
 
 type TextBuffer interface {

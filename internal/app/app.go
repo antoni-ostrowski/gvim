@@ -9,6 +9,7 @@ import (
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
 	"github.com/antoni-ostrowski/gvim/internal/vim"
 	"github.com/gdamore/tcell/v3"
+	"github.com/spf13/cobra"
 )
 
 type App struct {
@@ -20,6 +21,7 @@ type App struct {
 	EditorBuffer editorApi.TextBuffer
 	ArgPath      string
 	LogMess      string
+	rootCmd      *cobra.Command
 }
 
 var _ editorApi.EditorApi = (*App)(nil)
@@ -34,6 +36,11 @@ func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *Ap
 		ArgPath:      argPath,
 		EventChan:    eventChan,
 		LogMess:      "",
+		rootCmd: &cobra.Command{
+			Use:           "gvim",
+			SilenceErrors: true,
+			SilenceUsage:  true,
+		},
 	}
 	absPath, err := filepath.Abs(argPath)
 	app.LogMess = absPath
@@ -61,6 +68,11 @@ func isFile(path string) error {
 		return nil
 	}
 }
+
+func (a *App) RootCmd() *cobra.Command {
+	return a.rootCmd
+}
+
 func (a *App) TriggerEvent(event tcell.Event) {
 	a.EventChan <- event
 

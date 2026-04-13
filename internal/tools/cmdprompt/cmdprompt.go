@@ -1,12 +1,14 @@
-package tools
+package cmdprompt
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/antoni-ostrowski/gvim/internal/buffer"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
 	utils "github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
+	"github.com/spf13/cobra"
 )
 
 type CommandPrompt struct {
@@ -14,14 +16,46 @@ type CommandPrompt struct {
 	active bool
 }
 
-func NewCommandPrompt(screen tcell.Screen) *CommandPrompt {
+var _ editorApi.EditorTool = (*CommandPrompt)(nil)
+
+func New(screen tcell.Screen, api editorApi.EditorApi) *CommandPrompt {
 	_, y := screen.Size()
+
+	createCmds(api)
+
 	return &CommandPrompt{
 		Input: buffer.LineBuffer{X: 1, Y: y - 1, Buffer: []rune{}},
 	}
 }
 
-var _ editorApi.EditorTool = (*CommandPrompt)(nil)
+func createCmds(api editorApi.EditorApi) *cobra.Command {
+	rootCmd := api.RootCmd()
+
+	quitCmd := &cobra.Command{
+		Use:   "q",
+		Short: "Quit the editor",
+		Run: func(cmd *cobra.Command, args []string) {
+			api.SendQuitSignal()
+		},
+	}
+
+	writeCmd := &cobra.Command{
+		Use:   "w",
+		Short: "Write buffer to file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := api.WriteFile()
+			if err != nil {
+				return fmt.Errorf("error writing to file: %w", err)
+			}
+			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentBufferPath()))
+			return nil
+		},
+	}
+
+	rootCmd.AddCommand(quitCmd, writeCmd)
+
+	return rootCmd
+}
 
 func (c *CommandPrompt) Draw(screen tcell.Screen) {
 	if !c.active {
@@ -48,6 +82,8 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 		return false
 	}
 
+	rootCmd := api.RootCmd()
+
 	switch event.Key() {
 	case tcell.KeyEsc:
 		c.active = false
@@ -56,21 +92,16 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 			return true
 		}
 
-		if string(c.Input.Buffer[0]) == "q" {
-			api.SendQuitSignal()
-			return true
-		}
+		input := string(c.Input.Buffer)
+		args := strings.Fields(input)
+		rootCmd.SetArgs(args)
+		err := rootCmd.Execute()
 
-		if string(c.Input.Buffer[0]) == "w" {
-			err := api.WriteFile()
-			if err != nil {
-				api.Log(fmt.Errorf("file: err writing to a file: %w", err).Error())
-			}
-			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentBufferPath()))
-			api.TriggerEvent(tcell.NewEventKey(tcell.KeyEsc, "", tcell.ModNone))
-
-			return true
+		if err != nil {
+			api.Log(err.Error())
 		}
+		c.active = false
+
 		return true
 	}
 	return c.Input.HandleKey(event, api)

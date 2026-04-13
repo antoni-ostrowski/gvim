@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
-	"github.com/antoni-ostrowski/gvim/internal/tools"
+	"github.com/antoni-ostrowski/gvim/internal/tools/cmdprompt"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	appState := app.NewApp(screen, path, eventChannel)
-	appState.Tools["cmdPrompt"] = tools.NewCommandPrompt(screen)
+	appState.Tools["cmdPrompt"] = cmdprompt.New(screen, appState)
 
 	for {
 		select {

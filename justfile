@@ -5,7 +5,7 @@ default:
     just --list
 
 dev:
-    go run -race ./cmd/
+    go run -race ./cmd/ ./testfile.txt
 
 # Build optimized binary
 build:
