@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
-	"github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -14,6 +13,7 @@ type GapTextBuffer struct {
 	GapStart         int
 	GapEnd           int
 	CursorX, CursorY int
+	ScrollOffset     int
 	*editorApi.Position
 }
 
@@ -27,65 +27,86 @@ func NewGapBuffer(text string, pos *editorApi.Position) *GapTextBuffer {
 	copy(data, runes)
 
 	return &GapTextBuffer{Data: data, GapStart: len(runes),
-		GapEnd:   totalSize,
-		Position: pos,
-		CursorY:  0,
-		CursorX:  0,
+		GapEnd:       totalSize,
+		Position:     pos,
+		CursorY:      0,
+		CursorX:      0,
+		ScrollOffset: 0,
 	}
 }
+
 func (e *GapTextBuffer) GetPosition() *editorApi.Position {
 	return e.Position
 }
+
 func (e *GapTextBuffer) Bytes() []byte {
 	first := ([]byte(string(e.Data[:e.GapStart])))
 	second := ([]byte(string(e.Data[e.GapEnd:])))
 	return slices.Concat(first, second)
 }
-func (e *GapTextBuffer) Draw(screen tcell.Screen) {
-	utils.Debuglog("----------------------------------------------------")
-	drawX, drawY := e.Position.BaseX, e.Position.BaseY
-	e.CursorY = 0
-	e.CursorX = 0
 
+func (e *GapTextBuffer) Draw(screen tcell.Screen) {
+	drawX := e.Position.BaseX
+
+	lineNum := 0
+	colNum := 0
 	for i, rune := range e.Data {
-		// if we hit cursor position (so gap start), save the cords
-		// thats our cursor position to draw
+		// Track cursor position when we hit the gap
 		if i == e.GapStart {
-			e.CursorX = drawX
-			e.CursorY = drawY
+			e.CursorX = colNum
+			e.CursorY = lineNum
 		}
 
-		// skip drawing if gap buffer
+		// Skip gap buffer contents
 		if i >= e.GapStart && i < e.GapEnd {
 			continue
 		}
 
-		currLineEnd := e.findLineEnd(i)
-		utils.Debuglog("curr line end %v", currLineEnd)
+		// Check if this line should be drawn
+		isVisibleLine := lineNum >= e.ScrollOffset && lineNum < e.ScrollOffset+e.Position.Height
 
-		if drawY >= e.Position.Height+e.Position.BaseY {
-			continue
-		}
-
-		if drawX >= e.Position.Width+e.Position.BaseX {
-			continue
-		}
-
-		// handle new line
 		if rune == '\n' {
-			drawX = e.Position.BaseX
-			drawY++
+			if isVisibleLine {
+				// Only draw newline if it fits within width
+				if colNum < e.Position.Width {
+					screenY := lineNum - e.ScrollOffset + e.Position.BaseY
+					screen.Put(drawX+colNum, screenY, " ", tcell.StyleDefault)
+				}
+			}
+			lineNum++
+			colNum = 0
 			continue
 		}
 
-		screen.Put(drawX, drawY, string(rune), tcell.StyleDefault)
-		drawX++
+		if !isVisibleLine {
+			colNum++
+			continue
+		}
+
+		// Skip if beyond width
+		if colNum >= e.Position.Width {
+			colNum++
+			continue
+		}
+
+		screenY := lineNum - e.ScrollOffset + e.Position.BaseY
+		screenX := drawX + colNum
+		screen.Put(screenX, screenY, string(rune), tcell.StyleDefault)
+		colNum++
 	}
 
-	utils.Debuglog("drawY %v", drawY)
+	// Handle cursor at end of buffer (after loop)
+	if e.GapStart >= len(e.Data)-e.GapEnd+e.GapStart {
+		e.CursorX = colNum
+		e.CursorY = lineNum
+	}
 
-	utils.Debuglog("------------------------------------------------")
-	screen.ShowCursor(e.CursorX, e.CursorY)
+	// Show cursor on screen (adjusted for scroll)
+	cursorScreenY := e.CursorY - e.ScrollOffset + e.Position.BaseY
+	cursorScreenX := drawX + e.CursorX
+	if e.CursorY >= e.ScrollOffset && e.CursorY < e.ScrollOffset+e.Position.Height {
+		screen.ShowCursor(cursorScreenX, cursorScreenY)
+	}
 }
 
 func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
@@ -93,9 +114,11 @@ func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
 	case editorApi.DirLeft:
 		target := max(0, e.GapStart-amount)
 		e.MoveGapTo(target)
+		e.adjustScrollForCursor()
 	case editorApi.DirRight:
 		target := min(e.logicalLen(), e.GapStart+amount)
 		e.MoveGapTo(target)
+		e.adjustScrollForCursor()
 	case editorApi.DirUp:
 		targetLineStart := e.findLineStart(e.GapStart)
 		// how many runes deep is our cursor on the line
@@ -113,6 +136,7 @@ func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
 		targetLineEnd := e.findLineEnd(targetLineStart)
 		targetPos := min(targetLineStart+column, targetLineEnd)
 		e.MoveGapTo(targetPos)
+		e.adjustScrollForCursor()
 
 	case editorApi.DirDown:
 		targetLineStart := e.findLineStart(e.GapStart) // Start with current line
@@ -129,6 +153,7 @@ func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
 		targetLineEnd := e.findLineEnd(targetLineStart)
 		targetPos := min(targetLineStart+column, targetLineEnd)
 		e.MoveGapTo(targetPos)
+		e.adjustScrollForCursor()
 
 	}
 
@@ -245,5 +270,26 @@ func (e *GapTextBuffer) MoveGapRightByOne() {
 		e.Data[e.GapStart] = e.Data[e.GapEnd]
 		e.GapStart++
 		e.GapEnd++
+	}
+}
+func (e *GapTextBuffer) getCursorLine() int {
+	line := 0
+	for i := 0; i < e.GapStart && i < len(e.Data); i++ {
+		if e.Data[i] == '\n' {
+			line++
+		}
+	}
+	return line
+}
+
+func (e *GapTextBuffer) adjustScrollForCursor() {
+	cursorLine := e.getCursorLine()
+	// Scroll up if cursor is above visible area
+	if cursorLine < e.ScrollOffset {
+		e.ScrollOffset = cursorLine
+	}
+	// Scroll down if cursor is at or below visible area
+	if cursorLine >= e.ScrollOffset+e.Position.Height {
+		e.ScrollOffset = cursorLine - e.Position.Height + 1
 	}
 }
