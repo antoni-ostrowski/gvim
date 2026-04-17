@@ -30,17 +30,19 @@ type App struct {
 var _ editorApi.EditorApi = (*App)(nil)
 
 func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *App {
-	buf, cwd, absFilePath, err := parseFilepathArg(argPath)
+	contents, cwd, absFilePath, err := parseFilepathArg(argPath)
 	if err != nil {
 		log.Fatalf("failed to parse arg filepath: %v", err)
 	}
+
+	w, h := screen.Size()
 
 	app := &App{
 		Machine:      vim.NewMachine(),
 		QuitChn:      make(chan struct{}, 1),
 		Screen:       screen,
 		Tools:        make(map[string]editorApi.EditorTool),
-		EditorBuffer: buf,
+		EditorBuffer: buffer.NewGapBuffer(string(contents), &editorApi.Position{BaseX: 0, BaseY: 0, Width: w, Height: h}),
 		EventChan:    eventChan,
 		LogMess:      "",
 		rootCmd: &cobra.Command{
@@ -55,7 +57,7 @@ func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *Ap
 	return app
 }
 
-func parseFilepathArg(argPath string) (editorApi.TextBuffer, string, string, error) {
+func parseFilepathArg(argPath string) ([]byte, string, string, error) {
 	isFile := func(path string) error {
 		info, err := os.Stat(path)
 		if err == nil && info.IsDir() {
@@ -68,20 +70,20 @@ func parseFilepathArg(argPath string) (editorApi.TextBuffer, string, string, err
 
 	absPath, err := filepath.Abs(argPath)
 	if err != nil {
-		return buffer.NewGapBuffer(""), "", "", fmt.Errorf("parse arg filepath: %w", err)
+		return []byte{}, "", "", fmt.Errorf("parse arg filepath: %w", err)
 	}
 
 	err = isFile(absPath)
 	if err != nil {
-		return buffer.NewGapBuffer(""), absPath, "", nil
+		return []byte{}, absPath, "", nil
 	}
 
 	contents, err := os.ReadFile(absPath)
 	if err != nil {
-		return buffer.NewGapBuffer(""), "", "", fmt.Errorf("read file: %w", err)
+		return []byte{}, "", "", fmt.Errorf("read file: %w", err)
 	}
 
-	return buffer.NewGapBuffer(string(contents)), "", absPath, nil
+	return contents, "", absPath, nil
 }
 
 func (a *App) RootCmd() *cobra.Command {
@@ -110,7 +112,7 @@ func (a *App) OpenFile(file string) error {
 		return fmt.Errorf("open file: %w", err)
 	}
 
-	a.EditorBuffer = buffer.NewGapBuffer(string(contents))
+	a.EditorBuffer = buffer.NewGapBuffer(string(contents), a.Buffer().GetPosition())
 	return nil
 }
 

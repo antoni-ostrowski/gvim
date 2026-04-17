@@ -4,28 +4,37 @@ import (
 	"slices"
 
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	"github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
 )
 
 // we use go convention, so gap start is inclusive, gap end is exclusive
-// GapStart: The index of the first empty slot.
-// GapEnd: The index of the first valid character after the gap.
 type GapTextBuffer struct {
-	Data     []rune
-	GapStart int
-	GapEnd   int
+	Data             []rune
+	GapStart         int
+	GapEnd           int
+	CursorX, CursorY int
+	*editorApi.Position
 }
 
 var _ editorApi.TextBuffer = (*GapTextBuffer)(nil)
 
-func NewGapBuffer(text string) *GapTextBuffer {
+func NewGapBuffer(text string, pos *editorApi.Position) *GapTextBuffer {
 	initGapSize := 1024
 	runes := []rune(text)
 	totalSize := initGapSize + len(runes)
 	data := make([]rune, totalSize)
 	copy(data, runes)
 
-	return &GapTextBuffer{Data: data, GapStart: len(runes), GapEnd: totalSize}
+	return &GapTextBuffer{Data: data, GapStart: len(runes),
+		GapEnd:   totalSize,
+		Position: pos,
+		CursorY:  0,
+		CursorX:  0,
+	}
+}
+func (e *GapTextBuffer) GetPosition() *editorApi.Position {
+	return e.Position
 }
 func (e *GapTextBuffer) Bytes() []byte {
 	first := ([]byte(string(e.Data[:e.GapStart])))
@@ -33,14 +42,17 @@ func (e *GapTextBuffer) Bytes() []byte {
 	return slices.Concat(first, second)
 }
 func (e *GapTextBuffer) Draw(screen tcell.Screen) {
-	drawX, drawY := 0, 0
-	drawCursorX, drawCursorY := 0, 0
+	utils.Debuglog("----------------------------------------------------")
+	drawX, drawY := e.Position.BaseX, e.Position.BaseY
+	e.CursorY = 0
+	e.CursorX = 0
+
 	for i, rune := range e.Data {
 		// if we hit cursor position (so gap start), save the cords
 		// thats our cursor position to draw
 		if i == e.GapStart {
-			drawCursorX = drawX
-			drawCursorY = drawY
+			e.CursorX = drawX
+			e.CursorY = drawY
 		}
 
 		// skip drawing if gap buffer
@@ -48,9 +60,20 @@ func (e *GapTextBuffer) Draw(screen tcell.Screen) {
 			continue
 		}
 
+		currLineEnd := e.findLineEnd(i)
+		utils.Debuglog("curr line end %v", currLineEnd)
+
+		if drawY >= e.Position.Height+e.Position.BaseY {
+			continue
+		}
+
+		if drawX >= e.Position.Width+e.Position.BaseX {
+			continue
+		}
+
 		// handle new line
 		if rune == '\n' {
-			drawX = 0
+			drawX = e.Position.BaseX
 			drawY++
 			continue
 		}
@@ -58,7 +81,11 @@ func (e *GapTextBuffer) Draw(screen tcell.Screen) {
 		screen.Put(drawX, drawY, string(rune), tcell.StyleDefault)
 		drawX++
 	}
-	screen.ShowCursor(drawCursorX, drawCursorY)
+
+	utils.Debuglog("drawY %v", drawY)
+
+	utils.Debuglog("------------------------------------------------")
+	screen.ShowCursor(e.CursorX, e.CursorY)
 }
 
 func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
@@ -104,6 +131,7 @@ func (e *GapTextBuffer) MoveCursor(amount int, direction editorApi.Direction) {
 		e.MoveGapTo(targetPos)
 
 	}
+
 }
 
 func (e *GapTextBuffer) InsertCharAtCurrPos(char rune) {

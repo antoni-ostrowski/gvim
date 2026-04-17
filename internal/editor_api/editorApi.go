@@ -26,6 +26,7 @@ type TextBuffer interface {
 	JumpToLineStart()
 	JumpToLineEnd()
 	Bytes() []byte
+	GetPosition() *Position
 }
 
 type VimStateMachine interface {
@@ -58,3 +59,7 @@ const (
 	DirUp
 	DirDown
 )
+
+type Position struct {
+	BaseX, BaseY, Width, Height int
+}
