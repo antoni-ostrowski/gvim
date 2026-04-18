@@ -26,16 +26,19 @@ type TextBuffer interface {
 	JumpToLineStart()
 	JumpToLineEnd()
 	Bytes() []byte
+	SetBytes(content []byte)
 	GetPosition() *Position
+	SetCursorX(newCursorX int)
+	Clean()
 }
 
 type VimStateMachine interface {
-	Handler(event *tcell.EventKey, buf TextBuffer)
+	Handler(event *tcell.EventKey, buf TextBuffer) bool
 	GetMode() VimMode
 }
 
 type VimMode interface {
-	KeyHandler(event *tcell.EventKey, buf TextBuffer)
+	KeyHandler(event *tcell.EventKey, buf TextBuffer) bool
 }
 
 type EditorTool interface {

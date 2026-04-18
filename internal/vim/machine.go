@@ -14,10 +14,15 @@ func NewMachine() *Machine {
 		Mode: &Normal{},
 	}
 }
+func NewMachineInsertMode() *Machine {
+	return &Machine{
+		Mode: &Insert{},
+	}
+}
 
 var _ editorApi.VimStateMachine = (*Machine)(nil)
 
-func (m *Machine) Handler(event *tcell.EventKey, buf editorApi.TextBuffer) {
+func (m *Machine) Handler(event *tcell.EventKey, buf editorApi.TextBuffer) bool {
 	modeSwitchHandler := func() editorApi.VimMode {
 		switch m.Mode.(type) {
 		case *Normal:
@@ -53,10 +58,10 @@ func (m *Machine) Handler(event *tcell.EventKey, buf editorApi.TextBuffer) {
 	// if input was changing mode, we change mode and return early
 	if nextMode := modeSwitchHandler(); nextMode != nil {
 		m.Mode = nextMode
-		return
+		return true
 	}
 
-	m.Mode.KeyHandler(event, buf)
+	return m.Mode.KeyHandler(event, buf)
 }
 func (m *Machine) GetMode() editorApi.VimMode {
 	return m.Mode
@@ -66,14 +71,20 @@ type Normal struct{}
 
 var _ editorApi.VimMode = (*Normal)(nil)
 
-func (m *Normal) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
-	handleMovement(event, buf)
-	handleSharedKeys(event, buf)
+func (m *Normal) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) bool {
+	if handleSharedKeys(event, buf) {
+		return true
+	}
+	if handleMovement(event, buf) {
+		return true
+	}
 
 	if event.Key() == tcell.KeyEnter {
 		buf.MoveCursor(1, editorApi.DirDown)
-		return
+		return true
 	}
+
+	return false
 
 }
 
@@ -81,72 +92,91 @@ type Insert struct{}
 
 var _ editorApi.VimMode = (*Insert)(nil)
 
-func (m *Insert) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
-	handleSharedKeys(event, buf)
+func (m *Insert) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) bool {
+	if handleSharedKeys(event, buf) {
+		return true
+	}
 
 	if event.Key() == tcell.KeyBackspace {
 		buf.DeleteCharBeforeCursor()
-		return
+		return true
 	}
 
 	if event.Key() == tcell.KeyEnter {
 		buf.InsertNewLine()
-		return
+		return true
 	}
 
 	if event.Key() == tcell.KeyRune {
 		r := []rune(event.Str())[0]
 		buf.InsertCharAtCurrPos(r)
-		return
+		return true
 	}
-
+	return false
 }
 
 type Visual struct{}
 
 var _ editorApi.VimMode = (*Visual)(nil)
 
-func (m *Visual) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) {
-	handleMovement(event, buf)
-	handleSharedKeys(event, buf)
-
+func (m *Visual) KeyHandler(event *tcell.EventKey, buf editorApi.TextBuffer) bool {
+	if handleSharedKeys(event, buf) {
+		return true
+	}
+	if handleMovement(event, buf) {
+		return true
+	}
+	return false
 }
 
-func handleSharedKeys(event *tcell.EventKey, buf editorApi.TextBuffer) {
+func handleSharedKeys(event *tcell.EventKey, buf editorApi.TextBuffer) bool {
 	switch event.Key() {
 	case tcell.KeyLeft:
 		buf.MoveCursor(1, editorApi.DirLeft)
+		return true
 	case tcell.KeyRight:
 		buf.MoveCursor(1, editorApi.DirRight)
+		return true
 	case tcell.KeyUp:
 		buf.MoveCursor(1, editorApi.DirUp)
+		return true
 	case tcell.KeyDown:
 		buf.MoveCursor(1, editorApi.DirDown)
+		return true
 	}
+	return false
 }
 
-func handleMovement(event *tcell.EventKey, buf editorApi.TextBuffer) {
+func handleMovement(event *tcell.EventKey, buf editorApi.TextBuffer) bool {
 	switch event.Key() {
 	case tcell.KeyRune:
 		str := event.Str()
 		switch str {
 		case "h":
 			buf.MoveCursor(1, editorApi.DirLeft)
+			return true
 		case "l":
 			buf.MoveCursor(1, editorApi.DirRight)
+			return true
 		case "k":
 			buf.MoveCursor(1, editorApi.DirUp)
+			return true
 		case "j":
 			buf.MoveCursor(1, editorApi.DirDown)
+			return true
 		case "o":
 			buf.InsertNewLine()
+			return true
 		case "O":
 			buf.UpsertNewLine()
+			return true
 		case "$":
 			buf.JumpToLineEnd()
+			return true
 		case "0":
 			buf.JumpToLineStart()
+			return true
 		}
-
 	}
+	return false
 }

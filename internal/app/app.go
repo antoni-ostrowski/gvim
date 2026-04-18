@@ -42,7 +42,7 @@ func NewApp(screen tcell.Screen, argPath string, eventChan chan tcell.Event) *Ap
 		QuitChn:      make(chan struct{}, 1),
 		Screen:       screen,
 		Tools:        make(map[string]editorApi.EditorTool),
-		EditorBuffer: buffer.NewGapBuffer(string(contents), &editorApi.Position{BaseX: 0, BaseY: 0, Width: w, Height: h}),
+		EditorBuffer: buffer.NewGapBuffer(string(contents), &editorApi.Position{BaseX: 0, BaseY: 0, Width: w, Height: h - 2}),
 		EventChan:    eventChan,
 		LogMess:      "",
 		rootCmd: &cobra.Command{

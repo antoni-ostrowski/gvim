@@ -7,25 +7,28 @@ import (
 	"github.com/antoni-ostrowski/gvim/internal/buffer"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
 	utils "github.com/antoni-ostrowski/gvim/internal/utils"
+	"github.com/antoni-ostrowski/gvim/internal/vim"
 	"github.com/gdamore/tcell/v3"
 	"github.com/spf13/cobra"
 )
 
 type CommandPrompt struct {
-	// TODO: should use gap buffer with vim state machine
-	Input  buffer.LineBuffer
-	active bool
+	Input      editorApi.TextBuffer
+	VimMachine editorApi.VimStateMachine
+	active     bool
 }
 
 var _ editorApi.EditorTool = (*CommandPrompt)(nil)
 
 func New(screen tcell.Screen, api editorApi.EditorApi) *CommandPrompt {
-	_, y := screen.Size()
+	w, h := screen.Size()
 
 	createCmds(api)
 
+	c := buffer.NewGapBuffer("", &editorApi.Position{BaseX: 0, BaseY: h - 1, Width: w, Height: 1})
 	return &CommandPrompt{
-		Input: buffer.LineBuffer{X: 1, Y: y - 1, Buffer: []rune{}},
+		Input:      c,
+		VimMachine: vim.NewMachineInsertMode(),
 	}
 }
 
@@ -92,9 +95,9 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 	if isActivationCombo {
 		utils.Debuglog("cmd not active if hit!")
 		c.active = true
-		if len(c.Input.Buffer) > 0 {
-			c.Input.Buffer = []rune{}
-			c.Input.CursorPos = 0
+		c.VimMachine = vim.NewMachineInsertMode()
+		if len(c.Input.Bytes()) > 0 {
+			c.Input.Clean()
 		}
 		return true
 	}
@@ -105,15 +108,22 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 
 	rootCmd := api.RootCmd()
 
+	if event.Key() == tcell.KeyESC {
+		switch c.VimMachine.GetMode().(type) {
+		case *vim.Normal:
+			c.active = false
+			return true
+
+		}
+	}
+
 	switch event.Key() {
-	case tcell.KeyEsc:
-		c.active = false
 	case tcell.KeyEnter:
-		if len(c.Input.Buffer) == 0 {
+		if len(c.Input.Bytes()) == 0 {
 			return true
 		}
 
-		input := string(c.Input.Buffer)
+		input := string(c.Input.Bytes())
 		args := strings.Fields(input)
 		rootCmd.SetArgs(args)
 		err := rootCmd.Execute()
@@ -125,5 +135,5 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 
 		return true
 	}
-	return c.Input.HandleKey(event, api)
+	return c.VimMachine.Handler(event, c.Input)
 }

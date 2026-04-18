@@ -45,6 +45,22 @@ func (e *GapTextBuffer) Bytes() []byte {
 	return slices.Concat(first, second)
 }
 
+func (e *GapTextBuffer) SetBytes(content []byte) {
+	e.Data = []rune(string(content))
+}
+func (e *GapTextBuffer) SetCursorX(newPos int) {
+	e.CursorX = newPos
+}
+
+func (e *GapTextBuffer) Clean() {
+	e.Data = []rune{}
+	e.CursorY = 0
+	e.CursorX = 0
+	e.ScrollOffset = 0
+	e.GapStart = 0
+	e.GapEnd = 0
+}
+
 func (e *GapTextBuffer) Draw(screen tcell.Screen) {
 	drawX := e.Position.BaseX
 
