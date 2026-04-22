@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	"github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -15,6 +16,7 @@ type GapTextBuffer struct {
 	CursorX, CursorY int
 	ScrollOffset     int
 	*editorApi.Position
+	Style tcell.Style
 }
 
 var _ editorApi.TextBuffer = (*GapTextBuffer)(nil)
@@ -32,6 +34,7 @@ func NewGapBuffer(text string, pos *editorApi.Position) *GapTextBuffer {
 		CursorY:      0,
 		CursorX:      0,
 		ScrollOffset: 0,
+		Style:        tcell.StyleDefault,
 	}
 }
 
@@ -46,7 +49,11 @@ func (e *GapTextBuffer) Bytes() []byte {
 }
 
 func (e *GapTextBuffer) SetBytes(content []byte) {
-	e.Data = []rune(string(content))
+	runes := []rune(string(content))
+	gap := make([]rune, 1024)
+	e.Data = append(runes, gap...)
+	e.GapStart = len(runes)
+	e.GapEnd = len(e.Data)
 }
 func (e *GapTextBuffer) SetCursorX(newPos int) {
 	e.CursorX = newPos
@@ -61,7 +68,13 @@ func (e *GapTextBuffer) Clean() {
 	e.GapEnd = 0
 }
 
+func (e *GapTextBuffer) SetStyle(s tcell.Style) {
+	utils.Debuglog("setting style to %v", s)
+	e.Style = s
+}
+
 func (e *GapTextBuffer) Draw(screen tcell.Screen) {
+	utils.Debuglog("drawing with style %v", e.Style)
 	drawX := e.Position.BaseX
 
 	lineNum := 0
@@ -86,7 +99,7 @@ func (e *GapTextBuffer) Draw(screen tcell.Screen) {
 				// Only draw newline if it fits within width
 				if colNum < e.Position.Width {
 					screenY := lineNum - e.ScrollOffset + e.Position.BaseY
-					screen.Put(drawX+colNum, screenY, " ", tcell.StyleDefault)
+					screen.PutStrStyled(drawX+colNum, screenY, " ", e.Style)
 				}
 			}
 			lineNum++
@@ -107,7 +120,7 @@ func (e *GapTextBuffer) Draw(screen tcell.Screen) {
 
 		screenY := lineNum - e.ScrollOffset + e.Position.BaseY
 		screenX := drawX + colNum
-		screen.Put(screenX, screenY, string(rune), tcell.StyleDefault)
+		screen.PutStrStyled(screenX, screenY, string(rune), e.Style)
 		colNum++
 	}
 

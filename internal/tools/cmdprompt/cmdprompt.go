@@ -2,10 +2,12 @@ package cmdprompt
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/antoni-ostrowski/gvim/internal/buffer"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	"github.com/antoni-ostrowski/gvim/internal/tools/logger"
 	utils "github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/antoni-ostrowski/gvim/internal/vim"
 	"github.com/gdamore/tcell/v3"
@@ -35,6 +37,9 @@ func New(screen tcell.Screen, api editorApi.EditorApi) *CommandPrompt {
 func createCmds(api editorApi.EditorApi) *cobra.Command {
 	rootCmd := api.RootCmd()
 
+	thing := api.LogTool()
+	log := thing.(*logger.Logger)
+
 	quitCmd := &cobra.Command{
 		Use:     "quit",
 		Aliases: []string{"q"},
@@ -53,7 +58,7 @@ func createCmds(api editorApi.EditorApi) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("error writing to file: %w", err)
 			}
-			api.Log(fmt.Sprintf("wrote to file: %s", api.CurrentOpenedFilePath()))
+			log.Log(fmt.Sprintf("wrote to file: %s", api.CurrentOpenedFilePath()))
 			return nil
 		},
 	}
@@ -69,7 +74,7 @@ func createCmds(api editorApi.EditorApi) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				api.Log(fmt.Sprintf("opened %s", filename))
+				log.Log(fmt.Sprintf("opened %s", filename))
 			}
 
 			return nil
@@ -98,6 +103,7 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 		c.VimMachine = vim.NewMachineInsertMode()
 		if len(c.Input.Bytes()) > 0 {
 			c.Input.Clean()
+
 		}
 		return true
 	}
@@ -113,9 +119,10 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 		case *vim.Normal:
 			c.active = false
 			return true
-
 		}
 	}
+	thing := api.LogTool()
+	log := thing.(*logger.Logger)
 
 	switch event.Key() {
 	case tcell.KeyEnter:
@@ -125,15 +132,35 @@ func (c *CommandPrompt) HandleKey(event *tcell.EventKey, api editorApi.EditorApi
 
 		input := string(c.Input.Bytes())
 		args := strings.Fields(input)
+		utils.Debuglog("input %v, args %v", input, args)
+		if strings.Contains(input, "!") {
+			log.Log(fmt.Sprintf("got ! %v %v", input, args))
+
+			passToSh(args, api)
+			return true
+		}
 		rootCmd.SetArgs(args)
 		err := rootCmd.Execute()
 
 		if err != nil {
-			api.Log(err.Error())
+			log.Log(err.Error())
 		}
 		c.active = false
 
 		return true
 	}
 	return c.VimMachine.Handler(event, c.Input)
+}
+
+func passToSh(args []string, a editorApi.EditorApi) {
+	thing := a.LogTool()
+	log := thing.(*logger.Logger)
+	command := args[1]
+	realArgs := args[2:]
+	cmd := exec.Command(command, realArgs...)
+	cmd.Stdout = log.LogWriter()
+	cmd.Run()
+}
+
+func (c *CommandPrompt) SetStyle(s tcell.Style) {
 }

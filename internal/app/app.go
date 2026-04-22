@@ -3,12 +3,14 @@ package app
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/antoni-ostrowski/gvim/internal/buffer"
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
+	"github.com/antoni-ostrowski/gvim/internal/tools/logger"
 	"github.com/antoni-ostrowski/gvim/internal/vim"
 	"github.com/gdamore/tcell/v3"
 	"github.com/spf13/cobra"
@@ -24,6 +26,7 @@ type App struct {
 	Cwd           string
 	CurOpenedFile string
 	LogMess       string
+	LoggerTool    *logger.Logger
 	rootCmd       *cobra.Command
 }
 
@@ -94,10 +97,6 @@ func (a *App) TriggerEvent(event tcell.Event) {
 	a.EventChan <- event
 }
 
-func (a *App) Log(mess string) {
-	a.LogMess = mess
-}
-
 func (a *App) CurrentOpenedFilePath() string {
 	return a.CurOpenedFile
 }
@@ -137,4 +136,18 @@ func (a *App) SendQuitSignal() {
 
 func (a *App) Buffer() editorApi.TextBuffer {
 	return a.EditorBuffer
+}
+
+func (a *App) LogWriter() io.Writer {
+	return a
+}
+
+func (a *App) Write(p []byte) (n int, err error) {
+	s := string(p)
+	a.LoggerTool.Log(s)
+	return 0, nil
+}
+
+func (a *App) LogTool() editorApi.EditorTool {
+	return a.LoggerTool
 }

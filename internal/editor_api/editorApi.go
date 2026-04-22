@@ -10,10 +10,10 @@ type EditorApi interface {
 	Buffer() TextBuffer
 	WriteFile() error
 	CurrentOpenedFilePath() string
-	Log(mess string)
 	TriggerEvent(event tcell.Event)
 	RootCmd() *cobra.Command
 	OpenFile(filepath string) error
+	LogTool() EditorTool
 }
 
 type TextBuffer interface {
@@ -52,6 +52,7 @@ type KeyHandler interface {
 
 type Drawable interface {
 	Draw(screen tcell.Screen)
+	SetStyle(s tcell.Style)
 }
 
 type Direction int
