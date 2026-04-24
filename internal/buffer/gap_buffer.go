@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	editorApi "github.com/antoni-ostrowski/gvim/internal/editor_api"
-	"github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/gdamore/tcell/v3"
 )
 
@@ -69,12 +68,10 @@ func (e *GapTextBuffer) Clean() {
 }
 
 func (e *GapTextBuffer) SetStyle(s tcell.Style) {
-	utils.Debuglog("setting style to %v", s)
 	e.Style = s
 }
 
 func (e *GapTextBuffer) Draw(screen tcell.Screen) {
-	utils.Debuglog("drawing with style %v", e.Style)
 	drawX := e.Position.BaseX
 
 	lineNum := 0
@@ -321,4 +318,24 @@ func (e *GapTextBuffer) adjustScrollForCursor() {
 	if cursorLine >= e.ScrollOffset+e.Position.Height {
 		e.ScrollOffset = cursorLine - e.Position.Height + 1
 	}
+}
+
+func (e *GapTextBuffer) LineCount() int {
+	lineCount := 1
+	for i, rune := range e.Data {
+		if i >= e.GapStart && i < e.GapEnd {
+			continue
+		}
+
+		isVisibleLine := lineCount >= e.ScrollOffset && lineCount < e.ScrollOffset+e.Position.Height
+
+		if rune == '\n' && isVisibleLine {
+			lineCount++
+			continue
+		}
+
+	}
+
+	return lineCount
+
 }

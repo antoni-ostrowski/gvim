@@ -27,6 +27,7 @@ func New(screen tcell.Screen) *Logger {
 	return &Logger{
 		Input:      c,
 		VimMachine: vim.NewMachineInsertMode(),
+		active:     false,
 	}
 }
 
@@ -34,6 +35,7 @@ func (l *Logger) HandleKey(event *tcell.EventKey, api editorApi.EditorApi) bool 
 	if !l.active {
 		return false
 	}
+
 	if event.Key() == tcell.KeyESC {
 		switch l.VimMachine.GetMode().(type) {
 		case *vim.Normal:
@@ -41,16 +43,20 @@ func (l *Logger) HandleKey(event *tcell.EventKey, api editorApi.EditorApi) bool 
 			return true
 		}
 	}
-	return l.VimMachine.Handler(event, api.Buffer())
+
+	return l.VimMachine.Handler(event, l.Input)
 }
 
 func (l *Logger) Draw(screen tcell.Screen) {
-	utils.Debuglog("logger draw func invoked!")
 	if !l.active {
-		utils.Debuglog("logger is inactive, skipping drawing")
 		return
 	}
-	utils.Debuglog("with value %v", string(l.Input.Bytes()))
+
+	count := l.Input.LineCount()
+	utils.Debuglog("line count : %v", count)
+	w, h := screen.Size()
+	content := string(l.Input.Bytes())
+	l.Input = buffer.NewGapBuffer(content, &editorApi.Position{BaseX: 0, BaseY: (h - count) - 2, Width: w, Height: 20})
 
 	l.Input.SetStyle(tcell.StyleDefault.Background(color.Red))
 	l.Input.Draw(screen)

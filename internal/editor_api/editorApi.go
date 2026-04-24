@@ -30,6 +30,7 @@ type TextBuffer interface {
 	GetPosition() *Position
 	SetCursorX(newCursorX int)
 	Clean()
+	LineCount() int
 }
 
 type VimStateMachine interface {
