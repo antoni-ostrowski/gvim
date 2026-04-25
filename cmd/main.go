@@ -6,7 +6,9 @@ import (
 
 	"github.com/antoni-ostrowski/gvim/internal/app"
 	"github.com/antoni-ostrowski/gvim/internal/tools/cmdprompt"
+	"github.com/antoni-ostrowski/gvim/internal/tools/logger"
 	"github.com/gdamore/tcell/v3"
+	"github.com/gdamore/tcell/v3/color"
 )
 
 func main() {
@@ -19,7 +21,6 @@ func main() {
 	}
 	quit := func() {
 		screen.Fini()
-		os.Exit(0)
 	}
 	defer quit()
 
@@ -33,7 +34,13 @@ func main() {
 		path = os.Args[1]
 	}
 
+	defStyle := tcell.StyleDefault.Background(color.Reset).Foreground(color.Reset)
+	screen.SetStyle(defStyle)
+
 	appState := app.NewApp(screen, path, eventChannel)
+	loger := logger.New(screen)
+	appState.Tools["logger"] = loger
+	appState.LoggerTool = loger
 	appState.Tools["cmdPrompt"] = cmdprompt.New(screen, appState)
 
 	for {
