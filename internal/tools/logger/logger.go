@@ -8,7 +8,6 @@ import (
 	"github.com/antoni-ostrowski/gvim/internal/utils"
 	"github.com/antoni-ostrowski/gvim/internal/vim"
 	"github.com/gdamore/tcell/v3"
-	"github.com/gdamore/tcell/v3/color"
 )
 
 type Logger struct {
@@ -52,13 +51,12 @@ func (l *Logger) Draw(screen tcell.Screen) {
 		return
 	}
 
-	count := l.Input.LineCount()
-	utils.Debuglog("line count : %v", count)
 	w, h := screen.Size()
-	content := string(l.Input.Bytes())
-	l.Input = buffer.NewGapBuffer(content, &editorApi.Position{BaseX: 0, BaseY: (h - count) - 2, Width: w, Height: 20})
+	count := l.Input.LineCount()
+	l.Input.GetPosition().BaseY = (h - count) - 2
+	l.Input.GetPosition().BaseX = 0
+	l.Input.GetPosition().Width = w
 
-	l.Input.SetStyle(tcell.StyleDefault.Background(color.Red))
 	l.Input.Draw(screen)
 }
 
